@@ -20,8 +20,8 @@ import (
 const version = "0.2.0" // x-release-please-version
 
 // serverInstructions guides the client on how to choose among the tools.
-const serverInstructions = `This server provides READ-ONLY access to Arista EOS switches over eAPI and gNMI.
-It cannot change configuration; state-changing commands are rejected.
+const serverInstructions = `This server provides access to Arista EOS switches over eAPI and gNMI.
+When EOS_READ_ONLY=true (default), it cannot change configuration; state-changing commands are rejected.
 
 Choosing a target device:
 - Every tool takes a "device" argument. Prefer an IP address (e.g. "192.0.2.10").
