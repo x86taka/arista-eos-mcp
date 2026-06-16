@@ -23,14 +23,18 @@ configuration or device state is rejected before it reaches the device.
 
 ## Install
 
-Install the latest release straight into your `GOBIN` (`$(go env GOPATH)/bin`):
+Prebuilt binaries (linux/darwin/windows, amd64/arm64) are attached to each
+[GitHub Release](https://github.com/x86taka/arista-eos-mcp/releases) — download
+the archive for your platform and extract the `arista-eos-mcp` binary.
+
+Or install from source with Go:
 
 ```sh
 go install github.com/x86taka/arista-eos-mcp/cmd/arista-eos-mcp@latest
 ```
 
 This produces an `arista-eos-mcp` binary on your `PATH`. Pin a specific version
-by replacing `@latest` with a tag, e.g. `@v0.3.0`.
+by replacing `@latest` with a tag, e.g. `@v0.1.0`.
 
 ## Build from source
 
@@ -400,3 +404,22 @@ no write tools are currently implemented.
 go test ./...
 go vet ./...
 ```
+
+## Releases
+
+Releases are automated with
+[release-please](https://github.com/googleapis/release-please). Commits to
+`master` that follow [Conventional Commits](https://www.conventionalcommits.org/)
+(`feat:`, `fix:`, `feat!:`/`BREAKING CHANGE:`, …) drive the version bump.
+
+On each push to `master` the workflow maintains a **release PR** that updates
+`CHANGELOG.md`, the version in [`cmd/arista-eos-mcp/main.go`](cmd/arista-eos-mcp/main.go)
+(marked with `// x-release-please-version`), and `.release-please-manifest.json`.
+Merging that PR tags the commit (`vX.Y.Z`) and publishes a GitHub Release. The
+same workflow then runs [GoReleaser](https://goreleaser.com)
+([`.goreleaser.yaml`](.goreleaser.yaml)) to cross-compile the binaries and
+attach the archives + `checksums.txt` to that release.
+
+Config lives in [`release-please-config.json`](release-please-config.json),
+[`.goreleaser.yaml`](.goreleaser.yaml), and the workflow in
+[`.github/workflows/release-please.yml`](.github/workflows/release-please.yml).
