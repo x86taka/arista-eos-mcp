@@ -29,9 +29,9 @@ type Device struct {
 	EnablePassword string `json:"enable_password"` // enable (privileged exec) password; empty = none
 
 	// gNMI settings.
-	GNMIPort     int    `json:"gnmi_port"`   // default 6030
+	GNMIPort     int    `json:"gnmi_port"`     // default 6030
 	GNMIInsecure *bool  `json:"gnmi_insecure"` // plaintext (no TLS) gRPC; nil defaults to true
-	GNMITLSCA    string `json:"gnmi_tls_ca"` // optional path to CA cert
+	GNMITLSCA    string `json:"gnmi_tls_ca"`   // optional path to CA cert
 
 	// TLS / common.
 	TLSSkipVerify *bool `json:"tls_skip_verify"` // skip server cert verification; nil defaults to true
