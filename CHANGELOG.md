@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0](https://github.com/x86taka/arista-eos-mcp/compare/v0.3.0...v0.4.0) (2026-06-16)
+
+
+### Features
+
+* add additional show commands for routing, multicast, security, and system details ([1f3afa8](https://github.com/x86taka/arista-eos-mcp/commit/1f3afa8e3602c3b176c2cb855540e6e47c392016))
+* add catalogs ([86f7e3f](https://github.com/x86taka/arista-eos-mcp/commit/86f7e3f7a0e49ffe8dc3e3cee9e9ad54c0c916f9))
+* add new show commands for VXLAN, BGP EVPN, and interface status ([3f9cf1b](https://github.com/x86taka/arista-eos-mcp/commit/3f9cf1b7cbf35afa4d15b3aaedd5cc0fba292313))
+* add QoS, storm control, DHCP relay, sFlow, and VRRP show commands ([52f075e](https://github.com/x86taka/arista-eos-mcp/commit/52f075ec812c76b4d07b7f6deb19b3ab86faf8b5))
+* add show commands for MACsec, tunnels, MPLS, and VXLAN counters ([62062d2](https://github.com/x86taka/arista-eos-mcp/commit/62062d2fd4691dadc5d36892475fca5a2e0c23bd))
+* add show commands for PTP, AAA, TACACS+, RADIUS, and SNMP ([44c5186](https://github.com/x86taka/arista-eos-mcp/commit/44c5186a405581435ee5fd64e30a4c25210de29d))
+
+
+### Bug Fixes
+
+* adjust formatting of gNMI settings in Device struct ([82a627e](https://github.com/x86taka/arista-eos-mcp/commit/82a627ea3e731e9628c261030f230694ade6a0e2))
+* show commands for LACP, SNMP, MACsec, tunnels, and VXLAN ([4386dd7](https://github.com/x86taka/arista-eos-mcp/commit/4386dd7419e9645bbdec11729cbf6160474888f9))
+
 ## [0.3.0](https://github.com/x86taka/arista-eos-mcp/compare/v0.2.0...v0.3.0) (2026-06-16)
 
 
