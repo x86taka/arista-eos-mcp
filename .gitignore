@@ -1,0 +1,10 @@
+# Built binary
+/arista-eos-mcp
+/cmd/server/server
+
+# Go
+*.test
+*.out
+
+# Local device inventory (contains credentials)
+/devices.json

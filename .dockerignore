@@ -1,0 +1,10 @@
+.git
+.gitignore
+README.md
+*.md
+arista-eos-mcp
+/cmd/server/server
+*.test
+*.out
+devices.json
+.claude
