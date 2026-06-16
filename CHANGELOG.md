@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.3.0](https://github.com/x86taka/arista-eos-mcp/compare/v0.2.0...v0.3.0) (2026-06-16)
+
+
+### Features
+
+* add GitHub Actions workflow for testing Go code ([d9159de](https://github.com/x86taka/arista-eos-mcp/commit/d9159de22005988d03339223626bbb50fe93876c))
+* add GitHub Actions workflow for testing Go code ([0627e42](https://github.com/x86taka/arista-eos-mcp/commit/0627e42f4b36a3843568bbc86504479c5471324c))
+* add MIT License and update README with license information ([1a3d488](https://github.com/x86taka/arista-eos-mcp/commit/1a3d488f40e237abdaabe1ffeab08f2979f5ad59))
+* add MIT License and update README with license information ([dc106c9](https://github.com/x86taka/arista-eos-mcp/commit/dc106c95562bbec542e9b3ae9c84ce1e9fc70e3b))
+* enhance tool descriptions and add server instructions for clarity ([ae7f4d1](https://github.com/x86taka/arista-eos-mcp/commit/ae7f4d12b66b558559758bdf541f51f84354f271))
+* enhance tool descriptions and add server instructions for clarity ([05f3465](https://github.com/x86taka/arista-eos-mcp/commit/05f3465b91062ea4aba2d3916a9c05ae44abd171))
+* update tool usage instructions for clarity and specificity ([d0706a1](https://github.com/x86taka/arista-eos-mcp/commit/d0706a1010c08e0c8e96e91335a9d355ea38c3c3))
+
+
+### Bug Fixes
+
+* Potential fix for pull request finding ([bbf879f](https://github.com/x86taka/arista-eos-mcp/commit/bbf879f61b29d51d4430878bb667927be88aff12))
+* Potential fix for pull request finding ([412312b](https://github.com/x86taka/arista-eos-mcp/commit/412312bbae5bb2563e240482be126773c1e8c56c))
+
 ## [0.2.0](https://github.com/x86taka/arista-eos-mcp/compare/v0.1.0...v0.2.0) (2026-06-16)
 
 
