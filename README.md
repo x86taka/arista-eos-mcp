@@ -423,3 +423,7 @@ attach the archives + `checksums.txt` to that release.
 Config lives in [`release-please-config.json`](release-please-config.json),
 [`.goreleaser.yaml`](.goreleaser.yaml), and the workflow in
 [`.github/workflows/release-please.yml`](.github/workflows/release-please.yml).
+
+## License
+
+[MIT](LICENSE) © Takaharu Umeda
