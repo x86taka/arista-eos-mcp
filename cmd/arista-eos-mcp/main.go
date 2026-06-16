@@ -24,9 +24,9 @@ const serverInstructions = `This server provides access to Arista EOS switches o
 When EOS_READ_ONLY=true (default), it cannot change configuration; state-changing commands are rejected.
 
 Choosing a target device:
-- Every tool takes a "device" argument. Prefer an IP address (e.g. "192.0.2.10").
+- Most tools take a "device" argument. Prefer an IP address (e.g. "192.0.2.10").
   A configured device name or hostname also works. It is optional only when a
-  single device is configured.
+  single device is configured; fleet_* tools target many devices and list_devices takes no device.
 - Call "list_devices" first if you are unsure which devices exist or whether
   ad-hoc hosts (connect to any IP with shared credentials) are enabled.
 
