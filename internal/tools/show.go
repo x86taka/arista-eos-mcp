@@ -47,6 +47,28 @@ var showCatalog = []showSpec{
 	{"get_vrfs", "Configured VRFs and their interfaces/route-distinguishers. Use for: VRF list, tenant separation, which interfaces are in a VRF. Runs 'show vrf'.", "show vrf", "json"},
 	{"get_bfd_peers", "BFD (Bidirectional Forwarding Detection) peer/session state. Use for: fast failure-detection status, which BFD sessions are up/down, flapping links. Runs 'show bfd peers'.", "show bfd peers", "json"},
 	{"get_ipv6_neighbors", "IPv6 neighbor (ND) table — IPv6-to-MAC bindings. Use for: 'what MAC has IPv6 X', IPv6 neighbor resolution. Runs 'show ipv6 neighbors'.", "show ipv6 neighbors", "json"},
+
+	// Routing (beyond BGP/OSPF basics above).
+	{"get_ipv6_route", "IPv6 routing table (FIB/RIB). Use for: 'how does it reach IPv6 X', IPv6 next-hop, default route. Runs 'show ipv6 route'.", "show ipv6 route", "json"},
+	{"get_route_summary", "Route-table size summary by protocol/source (connected, static, BGP, OSPF, ...). Use for: 'how many routes', RIB scale, which protocol installs the most. Runs 'show ip route summary'.", "show ip route summary", "json"},
+	{"get_ospf", "OSPF process, area, and interface overview (router-id, areas, timers). Use for: OSPF config/state beyond adjacencies; pair with get_ospf_neighbors. Runs 'show ip ospf'.", "show ip ospf", "json"},
+	{"get_isis_neighbors", "IS-IS neighbor/adjacency table. Use for: IS-IS fabrics, adjacency state, stuck neighbors. Runs 'show isis neighbors'.", "show isis neighbors", "json"},
+
+	// Multicast.
+	{"get_pim_neighbors", "PIM neighbor table. Use for: multicast routing adjacencies, 'are PIM neighbors up'. Runs 'show ip pim neighbor'.", "show ip pim neighbor", "json"},
+	{"get_igmp_snooping_groups", "IGMP snooping group membership (which ports joined which multicast groups). Use for: 'who is receiving multicast group X', L2 multicast forwarding. Runs 'show ip igmp snooping groups'.", "show ip igmp snooping groups", "json"},
+
+	// Aggregation / L2 detail.
+	{"get_lacp_neighbors", "LACP neighbor/partner detail per port-channel member. Use for: LAG negotiation issues, partner system-id/state; pair with get_port_channels. Runs 'show lacp neighbor'.", "show lacp neighbor", "json"},
+
+	// Security / policy.
+	{"get_ip_access_lists", "Configured IPv4 ACLs and their rules with hit counters. Use for: 'what ACLs exist', which rules are matching, filtering/security audit. Runs 'show ip access-lists'.", "show ip access-lists", "json"},
+
+	// System / hardware / platform.
+	{"get_inventory", "Hardware inventory: chassis, line cards, fans, PSUs, optics with model and serial numbers. Use for: 'what hardware/serials', RMA, asset tracking. Runs 'show inventory'.", "show inventory", "json"},
+	{"get_reload_cause", "Reason for the most recent reload/reboot. Use for: 'why did it reboot', crash vs. planned reload, post-incident review. Runs 'show reload cause'.", "show reload cause", "json"},
+	{"get_hardware_capacity", "ASIC/TCAM and forwarding-resource utilization (routes, MACs, ACL entries vs. limits). Use for: 'is the switch running out of TCAM/table space', scale headroom. Runs 'show hardware capacity'.", "show hardware capacity", "json"},
+	{"get_clock", "Current device date/time and timezone. Use for: 'what time does the switch think it is', verifying clock after NTP checks. Runs 'show clock'.", "show clock", "text"},
 }
 
 func registerShowCatalog(s *mcp.Server, mgr *manager.Manager) {
