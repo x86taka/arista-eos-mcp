@@ -21,10 +21,23 @@ configuration or device state is rejected before it reaches the device.
 - An Arista EOS device with eAPI enabled (`management api http-commands`) and,
   optionally, gNMI (`management api gnmi`)
 
-## Build
+## Install
+
+Install the latest release straight into your `GOBIN` (`$(go env GOPATH)/bin`):
 
 ```sh
-go build -o arista-eos-mcp ./cmd/server
+go install github.com/x86taka/arista-eos-mcp/cmd/arista-eos-mcp@latest
+```
+
+This produces an `arista-eos-mcp` binary on your `PATH`. Pin a specific version
+by replacing `@latest` with a tag, e.g. `@v0.3.0`.
+
+## Build from source
+
+```sh
+git clone https://github.com/x86taka/arista-eos-mcp.git
+cd arista-eos-mcp
+go build -o arista-eos-mcp ./cmd/arista-eos-mcp
 ```
 
 ## Configuration
