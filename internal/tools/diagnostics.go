@@ -25,7 +25,7 @@ func registerDiagnostics(s *mcp.Server, mgr *manager.Manager) {
 	// command runs independently so one unsupported command doesn't fail the rest.
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "get_device_health",
-		Description: "Run a battery of read-only health checks (version, environment, interfaces, port-channels, MLAG, BGP) and return a combined report.",
+		Description: "One-shot overall health check of a SINGLE device: aggregates version, environment, interface status, port-channels, MLAG, and BGP into one report. Use for open-ended 'is this device healthy / what's its status' questions before drilling into a specific area.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args deviceArgs) (*mcp.CallToolResult, any, error) {
 		client, err := mgr.EAPI(args.Device)
 		if err != nil {
@@ -57,7 +57,7 @@ func registerDiagnostics(s *mcp.Server, mgr *manager.Manager) {
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "compare_config",
-		Description: "Compare the running configuration of two devices and report lines unique to each.",
+		Description: "Diff the running-config of TWO devices and report lines unique to each. Use for 'what's different between A and B', config drift, consistency checks across a pair.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args compareConfigArgs) (*mcp.CallToolResult, any, error) {
 		a, err := runningConfig(mgr, args.DeviceA)
 		if err != nil {
@@ -78,7 +78,7 @@ func registerDiagnostics(s *mcp.Server, mgr *manager.Manager) {
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "compare_command",
-		Description: "Run the same read-only command on two devices and report output lines unique to each.",
+		Description: "Run the SAME command on TWO devices and diff the output lines. Use to compare specific state between a pair (e.g. 'show vlan', 'show ip bgp summary'). For full config use compare_config; for many devices use fleet_run_command.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args compareCmdArgs) (*mcp.CallToolResult, any, error) {
 		if strings.TrimSpace(args.Command) == "" {
 			return nil, nil, fmt.Errorf("command is required")

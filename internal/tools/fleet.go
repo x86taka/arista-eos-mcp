@@ -101,7 +101,7 @@ func registerFleetTools(s *mcp.Server, mgr *manager.Manager) {
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "fleet_run_command",
-		Description: "Run the same read-only command on many devices in parallel and return a combined, per-device report.",
+		Description: "Run the SAME command on MANY devices (or all) in parallel and return a combined per-device report. Use for 'on all switches', 'across the fleet', bulk/sweep queries. For just two devices and a diff, use compare_command.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args fleetCmdArgs) (*mcp.CallToolResult, any, error) {
 		if strings.TrimSpace(args.Command) == "" {
 			return nil, nil, fmt.Errorf("command is required")
@@ -122,7 +122,7 @@ func registerFleetTools(s *mcp.Server, mgr *manager.Manager) {
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "fleet_get_version",
-		Description: "Collect 'show version' from many devices in parallel (model, EOS version, uptime).",
+		Description: "Collect version/model/uptime from MANY devices (or all) in parallel. Use for fleet-wide inventory: 'what EOS version is everything running', model audit.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args fleetDevArgs) (*mcp.CallToolResult, any, error) {
 		results, err := runFleet(mgr, args.Devices, "show version", "json")
 		if err != nil {

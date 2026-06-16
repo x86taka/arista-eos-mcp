@@ -82,7 +82,7 @@ func registerListDevices(s *mcp.Server, mgr *manager.Manager) {
 	type noArgs struct{}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "list_devices",
-		Description: "List the configured EOS device names that the other tools can target.",
+		Description: "List the configured EOS devices and whether ad-hoc hosts are allowed. Call this FIRST when you don't know which devices exist or what to pass as 'device'.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, _ noArgs) (*mcp.CallToolResult, any, error) {
 		names := mgr.Names()
 		var b strings.Builder
@@ -114,7 +114,7 @@ type runShowArgs struct {
 func registerShowTool(s *mcp.Server, mgr *manager.Manager) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "run_show_command",
-		Description: "Run a single read-only EOS command (e.g. 'show version') over eAPI and return the result. Write/config commands are rejected.",
+		Description: "Escape hatch: run an arbitrary read-only EOS command over eAPI. Use ONLY when no dedicated get_*/diagnostic tool fits the request — prefer the specific tools (they return cleaner data). Write/config commands are rejected.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args runShowArgs) (*mcp.CallToolResult, any, error) {
 		if strings.TrimSpace(args.Command) == "" {
 			return nil, nil, fmt.Errorf("command is required")
@@ -150,7 +150,7 @@ func registerSimpleEAPITools(s *mcp.Server, mgr *manager.Manager) {
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "get_interfaces",
-		Description: "Get interface status and counters ('show interfaces'). Optionally filter by interface name.",
+		Description: "Full per-interface detail (state, counters, addresses, MTU, description) from 'show interfaces'. Use for a deep look at one or all interfaces; optionally filter by interface name. For a quick up/down overview prefer get_interfaces_status.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args ifaceArgs) (*mcp.CallToolResult, any, error) {
 		cmd := "show interfaces"
 		if strings.TrimSpace(args.Interface) != "" {
@@ -162,7 +162,7 @@ func registerSimpleEAPITools(s *mcp.Server, mgr *manager.Manager) {
 	// get_running_config returns the full running config as text.
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "get_running_config",
-		Description: "Get the device running configuration as text.",
+		Description: "Full running configuration as text. Use for: 'show me the config', auditing settings, finding how something is configured. For comparing two devices' configs use compare_config instead.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args deviceArgs) (*mcp.CallToolResult, any, error) {
 		client, err := mgr.EAPI(args.Device)
 		if err != nil {
@@ -187,7 +187,7 @@ func registerGNMITools(s *mcp.Server, mgr *manager.Manager) {
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "gnmi_get",
-		Description: "Issue a gNMI Get for one or more paths and return the response as JSON.",
+		Description: "Fetch model-driven (OpenConfig) state/config via a gNMI Get for specific paths, returned as JSON. Use when the user asks for gNMI/OpenConfig data or a structured value at a known path. For CLI-style data prefer the get_* show tools.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args gnmiGetArgs) (*mcp.CallToolResult, any, error) {
 		if len(args.Paths) == 0 {
 			return nil, nil, fmt.Errorf("at least one path is required")
@@ -205,7 +205,7 @@ func registerGNMITools(s *mcp.Server, mgr *manager.Manager) {
 
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "gnmi_capabilities",
-		Description: "Get the device gNMI capabilities (supported models and encodings).",
+		Description: "List the device's gNMI capabilities (supported YANG models, encodings, versions). Use to discover what gNMI paths/models are available before gnmi_get/gnmi_subscribe.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args deviceArgs) (*mcp.CallToolResult, any, error) {
 		client, err := mgr.GNMI(args.Device)
 		if err != nil {
@@ -229,7 +229,7 @@ func registerGNMITools(s *mcp.Server, mgr *manager.Manager) {
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "gnmi_subscribe",
-		Description: "Subscribe to gNMI paths and collect telemetry updates over a bounded time window, then return them. Use 'once' for a single snapshot, 'sample' for periodic samples, or 'on-change' for change events.",
+		Description: "Watch gNMI paths OVER TIME and collect telemetry updates for a bounded window, then return them. Use when the user wants to observe change/trend/live values (e.g. counters increasing, a flapping state). Modes: 'once' (single snapshot), 'sample' (periodic), 'on-change' (events). For a one-shot value use gnmi_get.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args gnmiSubArgs) (*mcp.CallToolResult, any, error) {
 		if len(args.Paths) == 0 {
 			return nil, nil, fmt.Errorf("at least one path is required")

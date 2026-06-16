@@ -20,24 +20,24 @@ type showSpec struct {
 // showCatalog is the set of convenience read-only tools. JSON encoding is used
 // for structured commands; text for commands that EOS only renders as text.
 var showCatalog = []showSpec{
-	{"get_version", "EOS software version and hardware model ('show version').", "show version", "json"},
-	{"get_interfaces_status", "Brief interface status table ('show interfaces status').", "show interfaces status", "json"},
-	{"get_interface_counters", "Interface traffic counters ('show interfaces counters').", "show interfaces counters", "json"},
-	{"get_mac_address_table", "MAC address (bridging) table ('show mac address-table').", "show mac address-table", "json"},
-	{"get_arp_table", "IPv4 ARP table ('show ip arp').", "show ip arp", "json"},
-	{"get_vlans", "Configured VLANs ('show vlan').", "show vlan", "json"},
-	{"get_lldp_neighbors", "LLDP neighbor table ('show lldp neighbors').", "show lldp neighbors", "json"},
-	{"get_port_channels", "Port-channel (LAG) summary ('show port-channel summary').", "show port-channel summary", "json"},
-	{"get_mlag", "MLAG status ('show mlag').", "show mlag", "json"},
-	{"get_spanning_tree", "Spanning-tree state ('show spanning-tree').", "show spanning-tree", "json"},
-	{"get_bgp_summary", "BGP IPv4 unicast summary ('show ip bgp summary').", "show ip bgp summary", "json"},
-	{"get_bgp_neighbors", "BGP neighbor detail ('show ip bgp neighbors').", "show ip bgp neighbors", "json"},
-	{"get_ospf_neighbors", "OSPF neighbor table ('show ip ospf neighbor').", "show ip ospf neighbor", "json"},
-	{"get_transceivers", "Transceiver/optic detail ('show interfaces transceiver').", "show interfaces transceiver", "json"},
-	{"get_environment", "Power, cooling, and temperature ('show environment all').", "show environment all", "json"},
-	{"get_ntp_status", "NTP synchronization status ('show ntp status').", "show ntp status", "text"},
-	{"get_logging", "Recent syslog messages ('show logging last 100').", "show logging last 100", "text"},
-	{"get_processes", "Per-process CPU/memory snapshot ('show processes top once').", "show processes top once", "text"},
+	{"get_version", "EOS software version, model, serial, and uptime. Use for: 'what version/model is it', firmware, hardware, uptime, serial number. Runs 'show version'.", "show version", "json"},
+	{"get_interfaces_status", "Brief up/down status of all interfaces (link state, speed, VLAN, description). Use for: 'which ports are up/down', link status overview. Runs 'show interfaces status'.", "show interfaces status", "json"},
+	{"get_interface_counters", "Interface traffic and error counters. Use for: errors, drops, discards, CRC, packet/byte counts, troubleshooting a flapping or lossy link. Runs 'show interfaces counters'.", "show interfaces counters", "json"},
+	{"get_mac_address_table", "MAC address (bridging/forwarding) table. Use for: 'where is MAC X learned', which port/VLAN a MAC is on, layer-2 forwarding. Runs 'show mac address-table'.", "show mac address-table", "json"},
+	{"get_arp_table", "IPv4 ARP table (IP-to-MAC bindings). Use for: 'what MAC has IP X', ARP entries, neighbor resolution. Runs 'show ip arp'.", "show ip arp", "json"},
+	{"get_vlans", "Configured VLANs and their member ports. Use for: VLAN list, which ports are in a VLAN. Runs 'show vlan'.", "show vlan", "json"},
+	{"get_lldp_neighbors", "LLDP neighbor table (discovered adjacent devices and ports). Use for: 'what is connected to this switch', cabling/topology, neighbor discovery. Runs 'show lldp neighbors'.", "show lldp neighbors", "json"},
+	{"get_port_channels", "Port-channel (LAG / bonding / EtherChannel) summary and member state. Use for: LAG status, which members are active. Runs 'show port-channel summary'.", "show port-channel summary", "json"},
+	{"get_mlag", "MLAG (multi-chassis LAG) peer and domain status. Use for: MLAG health, peer-link, active/inactive state. Runs 'show mlag'.", "show mlag", "json"},
+	{"get_spanning_tree", "Spanning-tree (STP/RSTP/MSTP) state, roots, and port roles. Use for: STP topology, blocked ports, loops. Runs 'show spanning-tree'.", "show spanning-tree", "json"},
+	{"get_bgp_summary", "BGP IPv4 unicast neighbor summary (state, prefixes, uptime). Use FIRST for BGP questions: 'are BGP sessions up', peer states, prefix counts. Runs 'show ip bgp summary'.", "show ip bgp summary", "json"},
+	{"get_bgp_neighbors", "Detailed per-neighbor BGP info. Use for: deep BGP diagnosis after get_bgp_summary, capabilities, timers. Runs 'show ip bgp neighbors'.", "show ip bgp neighbors", "json"},
+	{"get_ospf_neighbors", "OSPF neighbor/adjacency table. Use for: OSPF questions, adjacency state (Full/Init), stuck neighbors. Runs 'show ip ospf neighbor'.", "show ip ospf neighbor", "json"},
+	{"get_transceivers", "Transceiver / optic (SFP/QSFP) detail incl. light levels and DOM. Use for: optical power, Rx/Tx dBm, failing or marginal optics. Runs 'show interfaces transceiver'.", "show interfaces transceiver", "json"},
+	{"get_environment", "Power supplies, fans/cooling, and temperatures. Use for: hardware health, overheating, PSU/fan failures. Runs 'show environment all'.", "show environment all", "json"},
+	{"get_ntp_status", "NTP synchronization status. Use for: clock sync, time drift, NTP peers. Runs 'show ntp status'.", "show ntp status", "text"},
+	{"get_logging", "The 100 most recent syslog messages. Use for: recent errors/events, 'what happened', log review. Runs 'show logging last 100'.", "show logging last 100", "text"},
+	{"get_processes", "Per-process CPU and memory snapshot. Use for: high CPU/memory, which process is busy. Runs 'show processes top once'.", "show processes top once", "text"},
 }
 
 func registerShowCatalog(s *mcp.Server, mgr *manager.Manager) {
@@ -57,7 +57,7 @@ func registerShowCatalog(s *mcp.Server, mgr *manager.Manager) {
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "get_ip_route",
-		Description: "IPv4 routing table ('show ip route'). Optionally filter by prefix and/or VRF.",
+		Description: "IPv4 routing table (FIB/RIB). Use for: 'how does it reach X', next-hop, default route, route to a prefix, VRF routing. Optionally filter by prefix and/or VRF. Runs 'show ip route'.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args routeArgs) (*mcp.CallToolResult, any, error) {
 		cmd := "show ip route"
 		if v := strings.TrimSpace(args.VRF); v != "" {
