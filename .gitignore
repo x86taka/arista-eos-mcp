@@ -1,6 +1,6 @@
 # Built binary
 /arista-eos-mcp
-/cmd/server/server
+/cmd/arista-eos-mcp/arista-eos-mcp
 
 # Go
 *.test
@@ -8,3 +8,6 @@
 
 # Local device inventory (contains credentials)
 /devices.json
+
+# goreleaser output
+/dist/
