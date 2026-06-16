@@ -17,7 +17,7 @@ import (
 	"github.com/x86taka/arista-eos-mcp/internal/tools"
 )
 
-const version = "0.3.0" // x-release-please-version
+const version = "0.4.0" // x-release-please-version
 
 // serverInstructions guides the client on how to choose among the tools.
 const serverInstructions = `This server provides access to Arista EOS switches over eAPI and gNMI.
