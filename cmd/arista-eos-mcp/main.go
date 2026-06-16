@@ -19,6 +19,31 @@ import (
 
 const version = "0.2.0" // x-release-please-version
 
+// serverInstructions guides the client on how to choose among the tools.
+const serverInstructions = `This server provides READ-ONLY access to Arista EOS switches over eAPI and gNMI.
+It cannot change configuration; state-changing commands are rejected.
+
+Choosing a target device:
+- Every tool takes a "device" argument. Prefer an IP address (e.g. "192.0.2.10").
+  A configured device name or hostname also works. It is optional only when a
+  single device is configured.
+- Call "list_devices" first if you are unsure which devices exist or whether
+  ad-hoc hosts (connect to any IP with shared credentials) are enabled.
+
+Choosing a tool:
+- Prefer the most SPECIFIC tool for the data you need (e.g. "get_bgp_summary",
+  "get_interfaces", "get_mac_address_table") instead of "run_show_command".
+- Use "run_show_command" only for read-only commands that have no dedicated tool.
+- For ONE command across MANY devices, use "fleet_run_command" / "fleet_get_version".
+- To diff TWO devices, use "compare_config" or "compare_command".
+- For an overall status check of one device, use "get_device_health".
+- For reachability tests use "ping_host" / "traceroute_host".
+- For model-driven telemetry or to watch values over time, use the gNMI tools
+  ("gnmi_get" for a snapshot, "gnmi_subscribe" for a time window).
+
+The "troubleshoot_*", "device_health_review", and "compare_devices" prompts
+provide ready-made investigation workflows.`
+
 func main() {
 	// Logs go to stderr so they don't corrupt the stdio MCP transport.
 	logger := log.New(os.Stderr, "arista-eos-mcp ", log.LstdFlags|log.Lmsgprefix)
@@ -37,8 +62,9 @@ func main() {
 
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    "arista-eos-mcp",
+		Title:   "Arista EOS (read-only)",
 		Version: version,
-	}, nil)
+	}, &mcp.ServerOptions{Instructions: serverInstructions})
 
 	tools.Register(server, mgr)
 
