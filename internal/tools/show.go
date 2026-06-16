@@ -38,6 +38,15 @@ var showCatalog = []showSpec{
 	{"get_ntp_status", "NTP synchronization status. Use for: clock sync, time drift, NTP peers. Runs 'show ntp status'.", "show ntp status", "text"},
 	{"get_logging", "The 100 most recent syslog messages. Use for: recent errors/events, 'what happened', log review. Runs 'show logging last 100'.", "show logging last 100", "text"},
 	{"get_processes", "Per-process CPU and memory snapshot. Use for: high CPU/memory, which process is busy. Runs 'show processes top once'.", "show processes top once", "text"},
+	{"get_vxlan_interface", "VXLAN interface (Vxlan1) config and state: VNI-to-VLAN/VRF mappings, source interface, flood lists. Use for: 'how is VXLAN set up', which VNIs are mapped, VTEP source IP. Runs 'show interfaces vxlan 1'.", "show interfaces vxlan 1", "json"},
+	{"get_vxlan_vtep", "Remote VTEPs (VXLAN tunnel endpoints) this switch has learned. Use for: 'which VTEPs/leaf switches are in the fabric', overlay peer discovery. Runs 'show vxlan vtep'.", "show vxlan vtep", "json"},
+	{"get_vxlan_address_table", "VXLAN MAC forwarding table mapping remote MACs to VTEPs and VNIs. Use for: 'which VTEP is MAC X behind', overlay layer-2 forwarding. Runs 'show vxlan address-table'.", "show vxlan address-table", "json"},
+	{"get_bgp_evpn_summary", "BGP EVPN (l2vpn evpn) neighbor summary. Use FIRST for EVPN questions: 'are EVPN sessions up', overlay control-plane peer states, route counts. Runs 'show bgp evpn summary'.", "show bgp evpn summary", "json"},
+	{"get_bgp_evpn", "BGP EVPN route table (Type-2 MAC/IP, Type-3 IMET, Type-5 IP prefix). Use for: deep EVPN diagnosis after get_bgp_evpn_summary, 'is MAC/IP X advertised', missing overlay routes. Runs 'show bgp evpn'.", "show bgp evpn", "json"},
+	{"get_ip_interface_brief", "Brief table of L3 interfaces with their IPv4 addresses and status. Use for: 'what IP is on interface X', SVI/routed-port addressing overview. Runs 'show ip interface brief'.", "show ip interface brief", "json"},
+	{"get_vrfs", "Configured VRFs and their interfaces/route-distinguishers. Use for: VRF list, tenant separation, which interfaces are in a VRF. Runs 'show vrf'.", "show vrf", "json"},
+	{"get_bfd_peers", "BFD (Bidirectional Forwarding Detection) peer/session state. Use for: fast failure-detection status, which BFD sessions are up/down, flapping links. Runs 'show bfd peers'.", "show bfd peers", "json"},
+	{"get_ipv6_neighbors", "IPv6 neighbor (ND) table — IPv6-to-MAC bindings. Use for: 'what MAC has IPv6 X', IPv6 neighbor resolution. Runs 'show ipv6 neighbors'.", "show ipv6 neighbors", "json"},
 }
 
 func registerShowCatalog(s *mcp.Server, mgr *manager.Manager) {
