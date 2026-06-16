@@ -27,8 +27,8 @@ Choosing a target device:
 - Most tools take a "device" argument. Prefer an IP address (e.g. "192.0.2.10").
   A configured device name or hostname also works. It is optional only when a
   single device is configured; fleet_* tools target many devices and list_devices takes no device.
-- Call "list_devices" first if you are unsure which devices exist or whether
-  ad-hoc hosts (connect to any IP with shared credentials) are enabled.
+- Some tools instead use "devices" (fleet_*), "device_a"/"device_b" (compare_*),
+   or no device argument at all (list_devices).
 
 Choosing a tool:
 - Prefer the most SPECIFIC tool for the data you need (e.g. "get_bgp_summary",
