@@ -69,6 +69,22 @@ var showCatalog = []showSpec{
 	{"get_reload_cause", "Reason for the most recent reload/reboot. Use for: 'why did it reboot', crash vs. planned reload, post-incident review. Runs 'show reload cause'.", "show reload cause", "json"},
 	{"get_hardware_capacity", "ASIC/TCAM and forwarding-resource utilization (routes, MACs, ACL entries vs. limits). Use for: 'is the switch running out of TCAM/table space', scale headroom. Runs 'show hardware capacity'.", "show hardware capacity", "json"},
 	{"get_clock", "Current device date/time and timezone. Use for: 'what time does the switch think it is', verifying clock after NTP checks. Runs 'show clock'.", "show clock", "text"},
+
+	// QoS.
+	{"get_qos_interfaces", "Per-interface QoS state: trust mode, default CoS/DSCP, shaping, and tx-queue mapping. Use for: QoS classification/queuing questions, 'how is QoS applied to a port'. Runs 'show qos interfaces'.", "show qos interfaces", "json"},
+
+	// Storm control.
+	{"get_storm_control", "Broadcast/multicast/unknown-unicast storm-control thresholds and current state per interface. Use for: storm-control config, suppressed traffic, 'is a port being rate-limited for broadcast'. Runs 'show storm-control'.", "show storm-control", "json"},
+
+	// DHCP relay.
+	{"get_dhcp_relay", "IPv4 DHCP relay (helper-address) configuration and status. Use for: 'where are DHCP requests forwarded', relay helper addresses, DHCP onboarding issues. Runs 'show ip dhcp relay'.", "show ip dhcp relay", "json"},
+
+	// sFlow.
+	{"get_sflow", "sFlow sampling status: collectors, sample rate, polling interval, datagrams sent. Use for: telemetry/flow-export health, 'is sFlow running and where does it send'. Runs 'show sflow'.", "show sflow", "json"},
+
+	// First-hop redundancy (VRRP / VARP).
+	{"get_vrrp", "VRRP group state per interface: master/backup role, virtual IP, priority, VRID. Use for: first-hop redundancy, 'who is the active gateway', VRRP failover. Runs 'show vrrp'.", "show vrrp", "json"},
+	{"get_varp", "VARP (virtual-router / anycast gateway) virtual IP and MAC addresses. Use for: distributed anycast gateways in EVPN/VXLAN fabrics, 'what is the shared gateway IP/MAC'. Runs 'show ip virtual-router'.", "show ip virtual-router", "json"},
 }
 
 func registerShowCatalog(s *mcp.Server, mgr *manager.Manager) {
