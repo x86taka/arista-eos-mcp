@@ -85,6 +85,18 @@ var showCatalog = []showSpec{
 	// First-hop redundancy (VRRP / VARP).
 	{"get_vrrp", "VRRP group state per interface: master/backup role, virtual IP, priority, VRID. Use for: first-hop redundancy, 'who is the active gateway', VRRP failover. Runs 'show vrrp'.", "show vrrp", "json"},
 	{"get_varp", "VARP (virtual-router / anycast gateway) virtual IP and MAC addresses. Use for: distributed anycast gateways in EVPN/VXLAN fabrics, 'what is the shared gateway IP/MAC'. Runs 'show ip virtual-router'.", "show ip virtual-router", "json"},
+
+	// PTP (Precision Time Protocol).
+	{"get_ptp", "PTP clock state: domain, profile, parent/grandmaster, offset-from-master, and port roles. Use for: hardware timing/sync health, 'is PTP locked', clock offset. Runs 'show ptp'.", "show ptp", "json"},
+
+	// AAA / TACACS+ / RADIUS.
+	{"get_aaa", "AAA configuration: authentication/authorization/accounting method lists and server groups. Use for: 'how is login auth configured', AAA method order. Runs 'show aaa'.", "show aaa", "json"},
+	{"get_tacacs", "TACACS+ server status and counters (reachability, requests, failures). Use for: 'are TACACS servers reachable', login auth failures, AAA backend health. Runs 'show tacacs'.", "show tacacs", "json"},
+	{"get_radius", "RADIUS server status and counters (reachability, requests, failures). Use for: 'are RADIUS servers reachable', auth/accounting backend health. Runs 'show radius'.", "show radius", "json"},
+
+	// SNMP.
+	{"get_snmp", "SNMP agent status: enabled state, communities/contexts, and engine info. Use for: 'is SNMP enabled', monitoring/polling setup. Runs 'show snmp'.", "show snmp", "json"},
+	{"get_snmp_host", "Configured SNMP trap/notification hosts (collectors) and versions. Use for: 'where are SNMP traps sent', trap-receiver config. Runs 'show snmp host'.", "show snmp host", "json"},
 }
 
 func registerShowCatalog(s *mcp.Server, mgr *manager.Manager) {
