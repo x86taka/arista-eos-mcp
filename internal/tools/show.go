@@ -97,6 +97,20 @@ var showCatalog = []showSpec{
 	// SNMP.
 	{"get_snmp", "SNMP agent status: enabled state, communities/contexts, and engine info. Use for: 'is SNMP enabled', monitoring/polling setup. Runs 'show snmp'.", "show snmp", "json"},
 	{"get_snmp_host", "Configured SNMP trap/notification hosts (collectors) and versions. Use for: 'where are SNMP traps sent', trap-receiver config. Runs 'show snmp host'.", "show snmp host", "json"},
+
+	// MACsec.
+	{"get_macsec", "MACsec status summary per interface: enabled state, profile, and key-server. Use for: 'is link encryption up', MACsec session health. Runs 'show mac security'.", "show mac security", "json"},
+	{"get_macsec_counters", "MACsec traffic and protection counters (encrypted/decrypted, protected/unprotected, errors). Use for: MACsec troubleshooting, integrity/decrypt failures. Runs 'show mac security counters'.", "show mac security counters", "json"},
+
+	// Tunnels (GRE / generic).
+	{"get_tunnel_interfaces", "Tunnel interface state and config (GRE and others): source/destination, MTU, line protocol. Use for: 'are tunnels up', GRE endpoint config, overlay tunnels. Runs 'show interfaces tunnel'.", "show interfaces tunnel", "json"},
+
+	// MPLS / LDP.
+	{"get_mpls_lfib", "MPLS label forwarding table (LFIB): in/out labels, FEC, next-hops. Use for: 'how is label X forwarded', MPLS data-plane. Runs 'show mpls lfib route'.", "show mpls lfib route", "json"},
+	{"get_ldp_neighbors", "LDP (Label Distribution Protocol) neighbor/session state. Use for: 'are LDP sessions up', label-distribution adjacencies. Runs 'show mpls ldp neighbor'.", "show mpls ldp neighbor", "json"},
+
+	// VXLAN counters.
+	{"get_vxlan_counters", "Per-VTEP/VNI VXLAN encap/decap packet and byte counters. Use for: overlay traffic volume, 'is VXLAN traffic flowing', encap/decap drops. Runs 'show vxlan counters'.", "show vxlan counters", "json"},
 }
 
 func registerShowCatalog(s *mcp.Server, mgr *manager.Manager) {
