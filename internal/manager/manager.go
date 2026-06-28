@@ -16,7 +16,8 @@ import (
 type Manager struct {
 	cfg     *config.Config
 	devices map[string]*config.Device
-	order   []string // device names in configuration order
+	byHost  map[string]*config.Device // configured devices keyed by host (IP/hostname)
+	order   []string                  // device names in configuration order
 
 	mu          sync.Mutex
 	dynamic     map[string]*config.Device // ad-hoc hosts created on demand
@@ -29,6 +30,7 @@ func New(cfg *config.Config) (*Manager, error) {
 	m := &Manager{
 		cfg:         cfg,
 		devices:     make(map[string]*config.Device, len(cfg.Devices)),
+		byHost:      make(map[string]*config.Device, len(cfg.Devices)),
 		dynamic:     make(map[string]*config.Device),
 		eapiClients: make(map[string]*eapi.Client),
 		gnmiClients: make(map[string]*gnmi.Client),
@@ -37,6 +39,14 @@ func New(cfg *config.Config) (*Manager, error) {
 		d := &cfg.Devices[i]
 		m.devices[d.Name] = d
 		m.order = append(m.order, d.Name)
+		// Index by host so a request addressed by IP/hostname reuses this
+		// device's credentials instead of falling back to defaults. First
+		// device wins if two share a host.
+		if d.Host != "" {
+			if _, ok := m.byHost[d.Host]; !ok {
+				m.byHost[d.Host] = d
+			}
+		}
 	}
 	if len(m.order) == 0 && !cfg.DynamicHostsEnabled() {
 		return nil, fmt.Errorf("no devices configured and ad-hoc hosts disabled")
@@ -59,10 +69,12 @@ func (m *Manager) Device(name string) (*config.Device, error) {
 	return m.resolve(name)
 }
 
-// resolve maps a device name to a configured device. If the name is not in the
-// inventory and ad-hoc hosts are enabled, it is treated as a hostname/IP and an
-// in-memory device using the shared default credentials is created and cached.
-// An empty name is allowed only when exactly one device is configured.
+// resolve maps a device selector to a configured device. It is matched first by
+// device name, then by host (so an IP/hostname matching a configured device
+// reuses that device's credentials). If still unmatched and ad-hoc hosts are
+// enabled, the selector is treated as a hostname/IP and an in-memory device
+// using the shared default credentials is created and cached. An empty name is
+// allowed only when exactly one device is configured.
 func (m *Manager) resolve(name string) (*config.Device, error) {
 	if name == "" {
 		if len(m.order) == 1 {
@@ -78,6 +90,11 @@ func (m *Manager) resolve(name string) (*config.Device, error) {
 		return nil, fmt.Errorf("%s", hint)
 	}
 	if d, ok := m.devices[name]; ok {
+		return d, nil
+	}
+	// A request addressed by IP/hostname matching a configured device reuses
+	// that device's credentials rather than the shared ad-hoc defaults.
+	if d, ok := m.byHost[name]; ok {
 		return d, nil
 	}
 
