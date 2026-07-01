@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/x86taka/arista-eos-mcp/compare/v0.4.0...v0.4.1) (2026-06-28)
+
+
+### Bug Fixes
+
+* add device resolution by IP and corresponding tests ([376934e](https://github.com/x86taka/arista-eos-mcp/commit/376934ed6c6e87f39768b124385a1606d7a274e7))
+* add device resolution by IP and corresponding tests ([ef72ed8](https://github.com/x86taka/arista-eos-mcp/commit/ef72ed834f26c0141b91dce7cc06067ee2bf208f))
+
 ## [0.4.0](https://github.com/x86taka/arista-eos-mcp/compare/v0.3.0...v0.4.0) (2026-06-16)
 
 
