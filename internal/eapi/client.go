@@ -62,8 +62,14 @@ func credentialSecrets(dev *config.Device) []string {
 // redaction marker. goeapi embeds the username (and, depending on the Go
 // version, potentially the password) in the eAPI request URL, which surfaces in
 // wrapped net/http errors such as connection timeouts or TLS failures; this
-// guarantees those credentials never reach the MCP client. The original error
-// (with its wrapping chain) is returned unchanged when nothing was redacted.
+// guarantees those credentials never reach the MCP client.
+//
+// When a secret is found, the wrapping chain is deliberately severed: a plain
+// errors.New value is returned instead of a wrapper that Unwraps to the
+// original error. Preserving the chain would re-expose the raw credential via
+// errors.Unwrap(err).Error() and %#v / %+v formatting, defeating the redaction.
+// No caller inspects these errors with errors.Is/As, so nothing is lost. When
+// nothing was redacted the original error (and its chain) is returned unchanged.
 func scrubSecrets(err error, secrets []string) error {
 	if err == nil {
 		return nil
