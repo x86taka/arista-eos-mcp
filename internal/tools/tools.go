@@ -96,8 +96,8 @@ func registerListDevices(s *mcp.Server, mgr *manager.Manager) {
 		}
 		if mgr.DynamicHostsEnabled() {
 			b.WriteString("\nAd-hoc hosts: enabled. Pass a target as the 'device' argument to connect " +
-				"using the shared default credentials — preferably an IP address (e.g. '192.0.2.10'), " +
-				"though a hostname also works.\n")
+				"using the shared default credentials — this must be a management IPv4 address " +
+				"(e.g. '192.0.2.10'), not a hostname.\n")
 		}
 		return textResult(b.String()), nil, nil
 	})
@@ -106,7 +106,7 @@ func registerListDevices(s *mcp.Server, mgr *manager.Manager) {
 // --- run_show_command ---
 
 type runShowArgs struct {
-	Device   string `json:"device,omitempty" jsonschema:"target device, given as an IP address whenever possible (e.g. '192.0.2.10'); a configured device name or hostname also works. Prefer an IP address. Optional only when a single device is configured"`
+	Device   string `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
 	Command  string `json:"command" jsonschema:"the read-only EOS command to run, e.g. 'show version'"`
 	Encoding string `json:"encoding,omitempty" jsonschema:"response encoding: 'json' (default) or 'text'"`
 }
@@ -139,13 +139,13 @@ func registerShowTool(s *mcp.Server, mgr *manager.Manager) {
 
 // deviceArgs is the argument struct for tools that only need a device selector.
 type deviceArgs struct {
-	Device string `json:"device,omitempty" jsonschema:"target device, given as an IP address whenever possible (e.g. '192.0.2.10'); a configured device name or hostname also works. Prefer an IP address. Optional only when a single device is configured"`
+	Device string `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
 }
 
 func registerSimpleEAPITools(s *mcp.Server, mgr *manager.Manager) {
 	// get_interfaces accepts an optional interface name.
 	type ifaceArgs struct {
-		Device    string `json:"device,omitempty" jsonschema:"target device, given as an IP address whenever possible (e.g. '192.0.2.10'); a configured device name or hostname also works. Prefer an IP address. Optional only when a single device is configured"`
+		Device    string `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
 		Interface string `json:"interface,omitempty" jsonschema:"optional interface name to filter, e.g. 'Ethernet1'"`
 	}
 	mcp.AddTool(s, &mcp.Tool{
@@ -180,7 +180,7 @@ func registerSimpleEAPITools(s *mcp.Server, mgr *manager.Manager) {
 
 func registerGNMITools(s *mcp.Server, mgr *manager.Manager) {
 	type gnmiGetArgs struct {
-		Device   string   `json:"device,omitempty" jsonschema:"target device, given as an IP address whenever possible (e.g. '192.0.2.10'); a configured device name or hostname also works. Prefer an IP address. Optional only when a single device is configured"`
+		Device   string   `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
 		Paths    []string `json:"paths" jsonschema:"gNMI paths to retrieve, e.g. ['/interfaces/interface/state']"`
 		Encoding string   `json:"encoding,omitempty" jsonschema:"encoding: 'json_ietf' (default), 'json', 'ascii', 'proto'"`
 		DataType string   `json:"data_type,omitempty" jsonschema:"data type: 'all' (default), 'config', 'state', 'operational'"`
@@ -220,7 +220,7 @@ func registerGNMITools(s *mcp.Server, mgr *manager.Manager) {
 
 	// gnmi_subscribe collects telemetry updates over a bounded window.
 	type gnmiSubArgs struct {
-		Device        string   `json:"device,omitempty" jsonschema:"target device, given as an IP address whenever possible (e.g. '192.0.2.10'); a configured device name or hostname also works. Prefer an IP address. Optional only when a single device is configured"`
+		Device        string   `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
 		Paths         []string `json:"paths" jsonschema:"gNMI paths to subscribe to, e.g. ['/interfaces/interface/state/counters']"`
 		Mode          string   `json:"mode,omitempty" jsonschema:"subscription mode: 'on-change' (default), 'sample', or 'once'"`
 		SampleSeconds int      `json:"sample_seconds,omitempty" jsonschema:"sample interval in seconds for 'sample' mode (default 10)"`

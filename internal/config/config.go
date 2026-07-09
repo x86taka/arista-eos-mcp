@@ -9,6 +9,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -66,8 +67,58 @@ type Config struct {
 	// nil (the default) means "enabled if Defaults credentials are present".
 	AllowDynamicHosts *bool `json:"allow_dynamic_hosts"`
 
+	// AllowedManagementPrefixes restricts which addresses may be reached as
+	// ad-hoc hosts. Each entry is an IPv4/IPv6 CIDR (e.g. "192.0.2.0/24").
+	// When non-empty, an ad-hoc host is accepted only if it is a management IP
+	// address inside one of these prefixes; hostnames and out-of-range IPs are
+	// rejected. Empty (the default) means no restriction. Configured devices
+	// are always reachable and are not subject to this allowlist.
+	AllowedManagementPrefixes []string `json:"allowed_management_prefixes"`
+
 	// TimeoutSeconds is the JSON form of Timeout.
 	TimeoutSeconds int `json:"timeout_seconds"`
+
+	// mgmtNets is the parsed form of AllowedManagementPrefixes (resolved).
+	mgmtNets []*net.IPNet
+}
+
+// ResolveManagementPrefixes parses AllowedManagementPrefixes into mgmtNets,
+// returning an error on any malformed CIDR entry.
+func (c *Config) ResolveManagementPrefixes() error {
+	c.mgmtNets = nil
+	for _, p := range c.AllowedManagementPrefixes {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		_, n, err := net.ParseCIDR(p)
+		if err != nil {
+			return fmt.Errorf("invalid allowed_management_prefixes entry %q: %w", p, err)
+		}
+		c.mgmtNets = append(c.mgmtNets, n)
+	}
+	return nil
+}
+
+// AllowedManagementHost reports whether host may be used as an ad-hoc target.
+// When management prefixes are configured, host must be a management IP address
+// within one of them; otherwise (no prefixes configured) any host is allowed.
+func (c *Config) AllowedManagementHost(host string) error {
+	if len(c.mgmtNets) == 0 {
+		return nil
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return fmt.Errorf("ad-hoc host %q must be a management IP address within an allowed prefix (%s), not a hostname",
+			host, strings.Join(c.AllowedManagementPrefixes, ", "))
+	}
+	for _, n := range c.mgmtNets {
+		if n.Contains(ip) {
+			return nil
+		}
+	}
+	return fmt.Errorf("ad-hoc host %q is not within an allowed management prefix (%s)",
+		host, strings.Join(c.AllowedManagementPrefixes, ", "))
 }
 
 // DynamicHostsEnabled reports whether ad-hoc hosts may be created from default
@@ -146,6 +197,10 @@ func loadFile(path string) (*Config, error) {
 	c.Timeout = time.Duration(c.TimeoutSeconds) * time.Second
 	c.ReadOnly = c.ReadOnlyRaw == nil || *c.ReadOnlyRaw // default true (safe)
 
+	if err := c.ResolveManagementPrefixes(); err != nil {
+		return nil, err
+	}
+
 	if c.Defaults != nil {
 		applyDefaultsConn(c.Defaults)
 	}
@@ -217,6 +272,16 @@ func loadEnv() (*Config, error) {
 	}
 	if v := os.Getenv("EOS_ALLOW_DYNAMIC_HOSTS"); v != "" {
 		c.AllowDynamicHosts = boolPtr(getenvBool("EOS_ALLOW_DYNAMIC_HOSTS", true))
+	}
+	if v := os.Getenv("EOS_ALLOWED_MANAGEMENT_PREFIXES"); v != "" {
+		for _, p := range strings.Split(v, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				c.AllowedManagementPrefixes = append(c.AllowedManagementPrefixes, p)
+			}
+		}
+	}
+	if err := c.ResolveManagementPrefixes(); err != nil {
+		return nil, err
 	}
 
 	// A predefined host is optional. When present, register it as a device.

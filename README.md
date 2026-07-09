@@ -107,6 +107,7 @@ override with `EOS_DEVICE_NAME`) from these variables.
 | `EOS_DEFAULT_PASSWORD`  | no       | =`EOS_PASSWORD` | shared password for ad-hoc hosts              |
 | `EOS_DEFAULT_ENABLE_PASSWORD` | no | =`EOS_ENABLE_PASSWORD` | shared enable password for ad-hoc hosts |
 | `EOS_ALLOW_DYNAMIC_HOSTS` | no     | auto     | force-enable/disable ad-hoc hosts (auto = on if default creds set) |
+| `EOS_ALLOWED_MANAGEMENT_PREFIXES` | no | —      | comma-separated CIDR allowlist for ad-hoc hosts (e.g. `192.0.2.0/24,10.10.0.0/16`) |
 | `EOS_EAPI_TRANSPORT`    | no       | `https`  | `https`, `http`, `http_local`, or `socket`           |
 | `EOS_EAPI_PORT`         | no       | `0`      | eAPI port (0 = transport default: https 443/http 80) |
 | `EOS_GNMI_PORT`         | no       | `6030`   | gNMI gRPC port                                       |
@@ -159,11 +160,35 @@ Ad-hoc access is enabled automatically when default credentials are present:
   }
   ```
 
-The `device` value is used verbatim as the connection host, so pass a resolvable
-hostname or IP (e.g. `device: "192.0.2.50"` or `device: "leaf9.lab"`). Ad-hoc
-hosts inherit the default transport/port/TLS settings. Connections are cached
-for reuse. Set `EOS_ALLOW_DYNAMIC_HOSTS=false` (or `"allow_dynamic_hosts": false`)
-to disable the behavior even when default credentials exist.
+The `device` value is used verbatim as the connection host. Pass a device's
+**management IPv4 address** (e.g. `device: "192.0.2.50"`) — that is the intended
+input, and the tool catalog instructs the model to use it. Ad-hoc hosts inherit
+the default transport/port/TLS settings. Connections are cached for reuse. Set
+`EOS_ALLOW_DYNAMIC_HOSTS=false` (or `"allow_dynamic_hosts": false`) to disable
+the behavior even when default credentials exist.
+
+### Restricting ad-hoc targets (management prefix allowlist)
+
+To keep the server safe, you can restrict which addresses an ad-hoc `device`
+argument may reach with an **allowlist of management prefixes**. When set, an
+ad-hoc host is accepted only if it is an IP address inside one of the prefixes;
+a hostname or an out-of-range IP is rejected. Predefined devices in the
+inventory are always reachable and are **not** subject to the allowlist.
+
+- **JSON mode:** a top-level `"allowed_management_prefixes"` array of CIDRs.
+
+  ```json
+  {
+    "allowed_management_prefixes": ["192.0.2.0/24", "10.10.0.0/16"],
+    "defaults": { "username": "admin", "password": "secret" }
+  }
+  ```
+
+- **Env mode:** `EOS_ALLOWED_MANAGEMENT_PREFIXES`, a comma-separated list of
+  CIDRs (e.g. `EOS_ALLOWED_MANAGEMENT_PREFIXES="192.0.2.0/24,10.10.0.0/16"`).
+
+Leaving the allowlist empty (the default) keeps the previous behavior — any
+host is accepted for ad-hoc access.
 
 `list_devices` reports whether ad-hoc access is enabled.
 

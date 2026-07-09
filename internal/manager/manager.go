@@ -99,6 +99,12 @@ func (m *Manager) resolve(name string) (*config.Device, error) {
 	}
 
 	if m.DynamicHostsEnabled() {
+		// Ad-hoc hosts are gated by the configured management-address allowlist
+		// so an LLM cannot cause connections to arbitrary hosts. Configured
+		// devices (matched above) bypass this check as they are trusted.
+		if err := m.cfg.AllowedManagementHost(name); err != nil {
+			return nil, err
+		}
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		if d, ok := m.dynamic[name]; ok {

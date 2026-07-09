@@ -52,8 +52,8 @@ func registerDiagnostics(s *mcp.Server, mgr *manager.Manager) {
 
 	// compare_config diffs the running-config of two devices.
 	type compareConfigArgs struct {
-		DeviceA string `json:"device_a" jsonschema:"first device, as an IP address whenever possible (a name/hostname also works)"`
-		DeviceB string `json:"device_b" jsonschema:"second device, as an IP address whenever possible (a name/hostname also works)"`
+		DeviceA string `json:"device_a" jsonschema:"first device, as its management IPv4 address (a configured device name also works, but do NOT pass a hostname)"`
+		DeviceB string `json:"device_b" jsonschema:"second device, as its management IPv4 address (a configured device name also works, but do NOT pass a hostname)"`
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "compare_config",
@@ -72,8 +72,8 @@ func registerDiagnostics(s *mcp.Server, mgr *manager.Manager) {
 
 	// compare_command runs the same command on two devices and diffs the text.
 	type compareCmdArgs struct {
-		DeviceA string `json:"device_a" jsonschema:"first device, as an IP address whenever possible (a name/hostname also works)"`
-		DeviceB string `json:"device_b" jsonschema:"second device, as an IP address whenever possible (a name/hostname also works)"`
+		DeviceA string `json:"device_a" jsonschema:"first device, as its management IPv4 address (a configured device name also works, but do NOT pass a hostname)"`
+		DeviceB string `json:"device_b" jsonschema:"second device, as its management IPv4 address (a configured device name also works, but do NOT pass a hostname)"`
 		Command string `json:"command" jsonschema:"the read-only command to run on both devices, e.g. 'show vlan'"`
 	}
 	mcp.AddTool(s, &mcp.Tool{

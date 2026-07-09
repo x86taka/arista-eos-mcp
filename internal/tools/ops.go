@@ -16,7 +16,7 @@ import (
 func registerOpsTools(s *mcp.Server, mgr *manager.Manager) {
 	// ping_host
 	type pingArgs struct {
-		Device      string `json:"device,omitempty" jsonschema:"target device, given as an IP address whenever possible (e.g. '192.0.2.10'); a configured device name or hostname also works. Prefer an IP address. Optional only when a single device is configured"`
+		Device      string `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
 		Destination string `json:"destination" jsonschema:"IP address or hostname to ping"`
 		Count       int    `json:"count,omitempty" jsonschema:"number of echo requests (default 5)"`
 		VRF         string `json:"vrf,omitempty" jsonschema:"optional VRF name"`
@@ -48,7 +48,7 @@ func registerOpsTools(s *mcp.Server, mgr *manager.Manager) {
 
 	// traceroute_host
 	type traceArgs struct {
-		Device      string `json:"device,omitempty" jsonschema:"target device, given as an IP address whenever possible (e.g. '192.0.2.10'); a configured device name or hostname also works. Prefer an IP address. Optional only when a single device is configured"`
+		Device      string `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
 		Destination string `json:"destination" jsonschema:"IP address or hostname to trace"`
 		VRF         string `json:"vrf,omitempty" jsonschema:"optional VRF name"`
 	}
@@ -69,7 +69,7 @@ func registerOpsTools(s *mcp.Server, mgr *manager.Manager) {
 
 	// BGP route inspection per neighbor.
 	type bgpRoutesArgs struct {
-		Device   string `json:"device,omitempty" jsonschema:"target device, given as an IP address whenever possible (e.g. '192.0.2.10'); a configured device name or hostname also works. Prefer an IP address. Optional only when a single device is configured"`
+		Device   string `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
 		Neighbor string `json:"neighbor" jsonschema:"BGP neighbor IP address"`
 	}
 	mcp.AddTool(s, &mcp.Tool{
