@@ -95,9 +95,16 @@ func registerListDevices(s *mcp.Server, mgr *manager.Manager) {
 			}
 		}
 		if mgr.DynamicHostsEnabled() {
-			b.WriteString("\nAd-hoc hosts: enabled. Pass a target as the 'device' argument to connect " +
-				"using the shared default credentials — this must be a management IPv4 address " +
-				"(e.g. '192.0.2.10'), not a hostname.\n")
+			if prefixes := mgr.AllowedManagementPrefixes(); len(prefixes) > 0 {
+				fmt.Fprintf(&b, "\nAd-hoc hosts: enabled, restricted to these management prefixes: %s. "+
+					"Pass a target's management IPv4 address within one of them as the 'device' argument "+
+					"(connects using the shared default credentials; hostnames and out-of-range "+
+					"addresses are rejected).\n", strings.Join(prefixes, ", "))
+			} else {
+				b.WriteString("\nAd-hoc hosts: enabled. Pass a target as the 'device' argument to connect " +
+					"using the shared default credentials — preferably its management IPv4 address " +
+					"(e.g. '192.0.2.10'). A hostname also works but is discouraged.\n")
+			}
 		}
 		return textResult(b.String()), nil, nil
 	})

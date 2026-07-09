@@ -64,6 +64,12 @@ func (m *Manager) DynamicHostsEnabled() bool {
 	return m.cfg.DynamicHostsEnabled()
 }
 
+// AllowedManagementPrefixes returns the configured ad-hoc management-prefix
+// allowlist (empty when no restriction is in effect).
+func (m *Manager) AllowedManagementPrefixes() []string {
+	return append([]string(nil), m.cfg.AllowedManagementPrefixes...)
+}
+
 // Device returns the device metadata for name (after resolution).
 func (m *Manager) Device(name string) (*config.Device, error) {
 	return m.resolve(name)

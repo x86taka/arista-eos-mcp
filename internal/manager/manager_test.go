@@ -114,6 +114,20 @@ func TestResolveAdHocHostnameRejectedWithPrefixes(t *testing.T) {
 	}
 }
 
+// A Config that carries prefixes but was never resolved must fail closed: an
+// ad-hoc host is rejected rather than silently allowed.
+func TestResolveFailsClosedWhenPrefixesUnresolved(t *testing.T) {
+	c := testConfig()
+	c.AllowedManagementPrefixes = []string{"192.0.2.0/24"} // deliberately NOT resolved
+	m, err := New(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.Device("192.0.2.50"); err == nil {
+		t.Fatal("unresolved allowlist must fail closed, not allow the host")
+	}
+}
+
 // A configured device is reachable by name even when it sits outside the
 // allowlist — the allowlist only gates ad-hoc hosts.
 func TestConfiguredDeviceBypassesPrefixAllowlist(t *testing.T) {

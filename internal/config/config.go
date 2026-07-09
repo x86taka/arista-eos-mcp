@@ -80,6 +80,11 @@ type Config struct {
 
 	// mgmtNets is the parsed form of AllowedManagementPrefixes (resolved).
 	mgmtNets []*net.IPNet
+
+	// mgmtResolved records that ResolveManagementPrefixes has run, so the
+	// allowlist check can fail closed if a Config carrying prefixes was never
+	// resolved.
+	mgmtResolved bool
 }
 
 // ResolveManagementPrefixes parses AllowedManagementPrefixes into mgmtNets,
@@ -97,6 +102,7 @@ func (c *Config) ResolveManagementPrefixes() error {
 		}
 		c.mgmtNets = append(c.mgmtNets, n)
 	}
+	c.mgmtResolved = true
 	return nil
 }
 
@@ -104,6 +110,11 @@ func (c *Config) ResolveManagementPrefixes() error {
 // When management prefixes are configured, host must be a management IP address
 // within one of them; otherwise (no prefixes configured) any host is allowed.
 func (c *Config) AllowedManagementHost(host string) error {
+	// Fail closed: if prefixes are configured but were never resolved, refuse
+	// rather than silently allowing every host and bypassing the security gate.
+	if !c.mgmtResolved && len(c.AllowedManagementPrefixes) > 0 {
+		return fmt.Errorf("management prefix allowlist is configured but not initialized; call ResolveManagementPrefixes() first")
+	}
 	if len(c.mgmtNets) == 0 {
 		return nil
 	}
