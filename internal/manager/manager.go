@@ -64,6 +64,12 @@ func (m *Manager) DynamicHostsEnabled() bool {
 	return m.cfg.DynamicHostsEnabled()
 }
 
+// AllowedManagementPrefixes returns the configured ad-hoc management-prefix
+// allowlist (empty when no restriction is in effect).
+func (m *Manager) AllowedManagementPrefixes() []string {
+	return append([]string(nil), m.cfg.AllowedManagementPrefixes...)
+}
+
 // Device returns the device metadata for name (after resolution).
 func (m *Manager) Device(name string) (*config.Device, error) {
 	return m.resolve(name)
@@ -99,6 +105,12 @@ func (m *Manager) resolve(name string) (*config.Device, error) {
 	}
 
 	if m.DynamicHostsEnabled() {
+		// Ad-hoc hosts are gated by the configured management-address allowlist
+		// so an LLM cannot cause connections to arbitrary hosts. Configured
+		// devices (matched above) bypass this check as they are trusted.
+		if err := m.cfg.AllowedManagementHost(name); err != nil {
+			return nil, err
+		}
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		if d, ok := m.dynamic[name]; ok {

@@ -1,6 +1,7 @@
 {
   "read_only": true,
   "timeout_seconds": 30,
+  "allowed_management_prefixes": ["192.0.2.0/24"],
   "defaults": {
     "username": "admin",
     "password": "secret",

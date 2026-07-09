@@ -124,7 +124,7 @@ func registerShowCatalog(s *mcp.Server, mgr *manager.Manager) {
 
 	// get_ip_route accepts an optional prefix and VRF.
 	type routeArgs struct {
-		Device string `json:"device,omitempty" jsonschema:"target device, given as an IP address whenever possible (e.g. '192.0.2.10'); a configured device name or hostname also works. Prefer an IP address. Optional only when a single device is configured"`
+		Device string `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
 		Prefix string `json:"prefix,omitempty" jsonschema:"optional IPv4 prefix or address to look up, e.g. '10.0.0.0/24'"`
 		VRF    string `json:"vrf,omitempty" jsonschema:"optional VRF name"`
 	}
