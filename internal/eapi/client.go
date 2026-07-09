@@ -3,7 +3,9 @@
 package eapi
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/aristanetworks/goeapi"
 
@@ -15,6 +17,7 @@ import (
 type Client struct {
 	node     *goeapi.Node
 	readOnly bool
+	secrets  []string // credential strings to scrub from returned errors
 }
 
 // New connects to the EOS device dev over eAPI. readOnly enables the safety
@@ -28,9 +31,10 @@ type Client struct {
 // required, front the device with a proxy that terminates TLS, or use the
 // "http_local"/"socket" transports on-box.
 func New(dev *config.Device, readOnly bool) (*Client, error) {
+	secrets := credentialSecrets(dev)
 	node, err := goeapi.Connect(dev.EAPITransport, dev.Host, dev.Username, dev.Password, dev.EAPIPort)
 	if err != nil {
-		return nil, fmt.Errorf("eAPI connect to %s failed: %w", dev.Host, err)
+		return nil, scrubSecrets(fmt.Errorf("eAPI connect to %s failed: %w", dev.Host, err), secrets)
 	}
 
 	// When an enable (privileged exec) password is configured, goeapi prepends
@@ -39,7 +43,42 @@ func New(dev *config.Device, readOnly bool) (*Client, error) {
 		node.EnableAuthentication(dev.EnablePassword)
 	}
 
-	return &Client{node: node, readOnly: readOnly}, nil
+	return &Client{node: node, readOnly: readOnly, secrets: secrets}, nil
+}
+
+// credentialSecrets collects the non-empty credential strings that must never
+// appear in an error returned to a caller.
+func credentialSecrets(dev *config.Device) []string {
+	var s []string
+	for _, v := range []string{dev.Password, dev.EnablePassword, dev.Username} {
+		if v != "" {
+			s = append(s, v)
+		}
+	}
+	return s
+}
+
+// scrubSecrets returns an error whose message has every secret replaced with a
+// redaction marker. goeapi embeds the username (and, depending on the Go
+// version, potentially the password) in the eAPI request URL, which surfaces in
+// wrapped net/http errors such as connection timeouts or TLS failures; this
+// guarantees those credentials never reach the MCP client. The original error
+// (with its wrapping chain) is returned unchanged when nothing was redacted.
+func scrubSecrets(err error, secrets []string) error {
+	if err == nil {
+		return nil
+	}
+	msg := err.Error()
+	redacted := msg
+	for _, s := range secrets {
+		if s != "" {
+			redacted = strings.ReplaceAll(redacted, s, "***")
+		}
+	}
+	if redacted == msg {
+		return err
+	}
+	return errors.New(redacted)
 }
 
 // Result holds the output of a single command.
@@ -66,10 +105,10 @@ func (c *Client) RunCommands(commands []string, encoding string) ([]Result, erro
 
 	resp, err := c.node.RunCommands(commands, encoding)
 	if err != nil {
-		return nil, fmt.Errorf("eAPI command execution failed: %w", err)
+		return nil, scrubSecrets(fmt.Errorf("eAPI command execution failed: %w", err), c.secrets)
 	}
 	if resp.Error != nil {
-		return nil, fmt.Errorf("eAPI returned error: %s", resp.Error.Message)
+		return nil, scrubSecrets(fmt.Errorf("eAPI returned error: %s", resp.Error.Message), c.secrets)
 	}
 
 	results := make([]Result, 0, len(resp.Result))
