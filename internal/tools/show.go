@@ -2,135 +2,205 @@ package tools
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/x86taka/arista-eos-mcp/internal/manager"
 )
 
-// showSpec describes a curated read-only tool backed by a single EOS command.
+// showSpec describes one curated read-only dataset reachable through
+// get_show_data. topic is the enum value clients pass; hint is a one-line
+// routing note folded into the tool description, left empty when the topic
+// name already says what the dataset is.
 type showSpec struct {
-	name     string
-	desc     string
+	topic    string
+	hint     string
 	command  string
 	encoding string // "json" or "text"
 }
 
-// showCatalog is the set of convenience read-only tools. JSON encoding is used
-// for structured commands; text for commands that EOS only renders as text.
+// showCatalog is the single source of truth for get_show_data: it drives the
+// topic enum, the hint table in the description, and command dispatch. JSON
+// encoding is used for structured commands; text for commands that EOS only
+// renders as text.
 var showCatalog = []showSpec{
-	{"get_version", "EOS software version, model, serial, and uptime. Use for: 'what version/model is it', firmware, hardware, uptime, serial number. Runs 'show version'.", "show version", "json"},
-	{"get_interfaces_status", "Brief up/down status of all interfaces (link state, speed, VLAN, description). Use for: 'which ports are up/down', link status overview. Runs 'show interfaces status'.", "show interfaces status", "json"},
-	{"get_interface_counters", "Interface traffic and error counters. Use for: errors, drops, discards, CRC, packet/byte counts, troubleshooting a flapping or lossy link. Runs 'show interfaces counters'.", "show interfaces counters", "json"},
-	{"get_mac_address_table", "MAC address (bridging/forwarding) table. Use for: 'where is MAC X learned', which port/VLAN a MAC is on, layer-2 forwarding. Runs 'show mac address-table'.", "show mac address-table", "json"},
-	{"get_arp_table", "IPv4 ARP table (IP-to-MAC bindings). Use for: 'what MAC has IP X', ARP entries, neighbor resolution. Runs 'show ip arp'.", "show ip arp", "json"},
-	{"get_vlans", "Configured VLANs and their member ports. Use for: VLAN list, which ports are in a VLAN. Runs 'show vlan'.", "show vlan", "json"},
-	{"get_lldp_neighbors", "LLDP neighbor table (discovered adjacent devices and ports). Use for: 'what is connected to this switch', cabling/topology, neighbor discovery. Runs 'show lldp neighbors'.", "show lldp neighbors", "json"},
-	{"get_port_channels", "Port-channel (LAG / bonding / EtherChannel) summary and member state. Use for: LAG status, which members are active. Runs 'show port-channel summary'.", "show port-channel summary", "json"},
-	{"get_mlag", "MLAG (multi-chassis LAG) peer and domain status. Use for: MLAG health, peer-link, active/inactive state. Runs 'show mlag'.", "show mlag", "json"},
-	{"get_spanning_tree", "Spanning-tree (STP/RSTP/MSTP) state, roots, and port roles. Use for: STP topology, blocked ports, loops. Runs 'show spanning-tree'.", "show spanning-tree", "json"},
-	{"get_bgp_summary", "BGP IPv4 unicast neighbor summary (state, prefixes, uptime). Use FIRST for BGP questions: 'are BGP sessions up', peer states, prefix counts. Runs 'show ip bgp summary'.", "show ip bgp summary", "json"},
-	{"get_bgp_neighbors", "Detailed per-neighbor BGP info. Use for: deep BGP diagnosis after get_bgp_summary, capabilities, timers. Runs 'show ip bgp neighbors'.", "show ip bgp neighbors", "json"},
-	{"get_ospf_neighbors", "OSPF neighbor/adjacency table. Use for: OSPF questions, adjacency state (Full/Init), stuck neighbors. Runs 'show ip ospf neighbor'.", "show ip ospf neighbor", "json"},
-	{"get_transceivers", "Transceiver / optic (SFP/QSFP) detail incl. light levels and DOM. Use for: optical power, Rx/Tx dBm, failing or marginal optics. Runs 'show interfaces transceiver'.", "show interfaces transceiver", "json"},
-	{"get_environment", "Power supplies, fans/cooling, and temperatures. Use for: hardware health, overheating, PSU/fan failures. Runs 'show environment all'.", "show environment all", "json"},
-	{"get_ntp_status", "NTP synchronization status. Use for: clock sync, time drift, NTP peers. Runs 'show ntp status'.", "show ntp status", "text"},
-	{"get_logging", "The 100 most recent syslog messages. Use for: recent errors/events, 'what happened', log review. Runs 'show logging last 100'.", "show logging last 100", "text"},
-	{"get_processes", "Per-process CPU and memory snapshot. Use for: high CPU/memory, which process is busy. Runs 'show processes top once'.", "show processes top once", "text"},
-	{"get_vxlan_interface", "VXLAN interface (Vxlan1) config and state: VNI-to-VLAN/VRF mappings, source interface, flood lists. Use for: 'how is VXLAN set up', which VNIs are mapped, VTEP source IP. Runs 'show interfaces vxlan 1'.", "show interfaces vxlan 1", "json"},
-	{"get_vxlan_vtep", "Remote VTEPs (VXLAN tunnel endpoints) this switch has learned. Use for: 'which VTEPs/leaf switches are in the fabric', overlay peer discovery. Runs 'show vxlan vtep'.", "show vxlan vtep", "json"},
-	{"get_vxlan_address_table", "VXLAN MAC forwarding table mapping remote MACs to VTEPs and VNIs. Use for: 'which VTEP is MAC X behind', overlay layer-2 forwarding. Runs 'show vxlan address-table'.", "show vxlan address-table", "json"},
-	{"get_bgp_evpn_summary", "BGP EVPN (l2vpn evpn) neighbor summary. Use FIRST for EVPN questions: 'are EVPN sessions up', overlay control-plane peer states, route counts. Runs 'show bgp evpn summary'.", "show bgp evpn summary", "json"},
-	{"get_bgp_evpn", "BGP EVPN route table (Type-2 MAC/IP, Type-3 IMET, Type-5 IP prefix). Use for: deep EVPN diagnosis after get_bgp_evpn_summary, 'is MAC/IP X advertised', missing overlay routes. Runs 'show bgp evpn'.", "show bgp evpn", "json"},
-	{"get_ip_interface_brief", "Brief table of L3 interfaces with their IPv4 addresses and status. Use for: 'what IP is on interface X', SVI/routed-port addressing overview. Runs 'show ip interface brief'.", "show ip interface brief", "json"},
-	{"get_vrfs", "Configured VRFs and their interfaces/route-distinguishers. Use for: VRF list, tenant separation, which interfaces are in a VRF. Runs 'show vrf'.", "show vrf", "json"},
-	{"get_bfd_peers", "BFD (Bidirectional Forwarding Detection) peer/session state. Use for: fast failure-detection status, which BFD sessions are up/down, flapping links. Runs 'show bfd peers'.", "show bfd peers", "json"},
-	{"get_ipv6_neighbors", "IPv6 neighbor (ND) table — IPv6-to-MAC bindings. Use for: 'what MAC has IPv6 X', IPv6 neighbor resolution. Runs 'show ipv6 neighbors'.", "show ipv6 neighbors", "json"},
+	{"version", "EOS version, model, serial number, uptime", "show version", "json"},
+	{"interfaces_status", "", "show interfaces status", "json"},
+	{"interface_counters", "traffic and error counters: drops, discards, CRC", "show interfaces counters", "json"},
+	{"mac_address_table", "", "show mac address-table", "json"},
+	{"arp_table", "", "show ip arp", "json"},
+	{"vlans", "", "show vlan", "json"},
+	{"lldp_neighbors", "", "show lldp neighbors", "json"},
+	{"port_channels", "LAG/EtherChannel summary and member state", "show port-channel summary", "json"},
+	{"mlag", "", "show mlag", "json"},
+	{"spanning_tree", "", "show spanning-tree", "json"},
+	{"bgp_summary", "BGP IPv4 session states and prefix counts; start here for BGP", "show ip bgp summary", "json"},
+	{"bgp_neighbors", "per-neighbor BGP detail; use after bgp_summary", "show ip bgp neighbors", "json"},
+	{"ospf_neighbors", "", "show ip ospf neighbor", "json"},
+	{"transceivers", "optic/SFP DOM: Rx/Tx light levels", "show interfaces transceiver", "json"},
+	{"environment", "power supplies, fans, temperatures", "show environment all", "json"},
+	{"ntp_status", "", "show ntp status", "text"},
+	{"logging", "100 most recent syslog messages", "show logging last 100", "text"},
+	{"processes", "per-process CPU and memory snapshot", "show processes top once", "text"},
+	{"vxlan_interface", "VNI-to-VLAN/VRF mappings and VTEP source interface", "show interfaces vxlan 1", "json"},
+	{"vxlan_vtep", "remote VTEPs this switch has learned", "show vxlan vtep", "json"},
+	{"vxlan_address_table", "remote MAC to VTEP/VNI forwarding table", "show vxlan address-table", "json"},
+	{"bgp_evpn_summary", "EVPN control-plane session states; start here for EVPN", "show bgp evpn summary", "json"},
+	{"bgp_evpn", "EVPN routes (Type-2/3/5); use after bgp_evpn_summary", "show bgp evpn", "json"},
+	{"ip_interface_brief", "L3 interfaces with their IPv4 addresses", "show ip interface brief", "json"},
+	{"vrfs", "", "show vrf", "json"},
+	{"bfd_peers", "BFD fast-failure-detection session state", "show bfd peers", "json"},
+	{"ipv6_neighbors", "", "show ipv6 neighbors", "json"},
 
 	// Routing (beyond BGP/OSPF basics above).
-	{"get_ipv6_route", "IPv6 routing table (FIB/RIB). Use for: 'how does it reach IPv6 X', IPv6 next-hop, default route. Runs 'show ipv6 route'.", "show ipv6 route", "json"},
-	{"get_route_summary", "Route-table size summary by protocol/source (connected, static, BGP, OSPF, ...). Use for: 'how many routes', RIB scale, which protocol installs the most. Runs 'show ip route summary'.", "show ip route summary", "json"},
-	{"get_ospf", "OSPF process, area, and interface overview (router-id, areas, timers). Use for: OSPF config/state beyond adjacencies; pair with get_ospf_neighbors. Runs 'show ip ospf'.", "show ip ospf", "json"},
-	{"get_isis_neighbors", "IS-IS neighbor/adjacency table. Use for: IS-IS fabrics, adjacency state, stuck neighbors. Runs 'show isis neighbors'.", "show isis neighbors", "json"},
+	{"ipv6_route", "", "show ipv6 route", "json"},
+	{"route_summary", "route counts by protocol (RIB scale)", "show ip route summary", "json"},
+	{"ospf", "OSPF process, areas, timers; pair with ospf_neighbors", "show ip ospf", "json"},
+	{"isis_neighbors", "", "show isis neighbors", "json"},
 
 	// Multicast.
-	{"get_pim_neighbors", "PIM neighbor table. Use for: multicast routing adjacencies, 'are PIM neighbors up'. Runs 'show ip pim neighbor'.", "show ip pim neighbor", "json"},
-	{"get_igmp_snooping_groups", "IGMP snooping group membership (which ports joined which multicast groups). Use for: 'who is receiving multicast group X', L2 multicast forwarding. Runs 'show ip igmp snooping groups'.", "show ip igmp snooping groups", "json"},
+	{"pim_neighbors", "PIM multicast routing adjacencies", "show ip pim neighbor", "json"},
+	{"igmp_snooping_groups", "which ports joined which multicast groups", "show ip igmp snooping groups", "json"},
 
 	// Aggregation / L2 detail.
-	{"get_lacp_peers", "LACP peer/partner detail per port-channel member. Use for: LAG negotiation issues, partner system-id/state; pair with get_port_channels. Runs 'show lacp peer'.", "show lacp peer", "json"},
+	{"lacp_peers", "LACP partner detail; pair with port_channels", "show lacp peer", "json"},
 
 	// Security / policy.
-	{"get_ip_access_lists", "Configured IPv4 ACLs and their rules with hit counters. Use for: 'what ACLs exist', which rules are matching, filtering/security audit. Runs 'show ip access-lists'.", "show ip access-lists", "json"},
+	{"ip_access_lists", "IPv4 ACL rules with hit counters", "show ip access-lists", "json"},
 
 	// System / hardware / platform.
-	{"get_inventory", "Hardware inventory: chassis, line cards, fans, PSUs, optics with model and serial numbers. Use for: 'what hardware/serials', RMA, asset tracking. Runs 'show inventory'.", "show inventory", "json"},
-	{"get_reload_cause", "Reason for the most recent reload/reboot. Use for: 'why did it reboot', crash vs. planned reload, post-incident review. Runs 'show reload cause'.", "show reload cause", "json"},
-	{"get_hardware_capacity", "ASIC/TCAM and forwarding-resource utilization (routes, MACs, ACL entries vs. limits). Use for: 'is the switch running out of TCAM/table space', scale headroom. Runs 'show hardware capacity'.", "show hardware capacity", "json"},
-	{"get_clock", "Current device date/time and timezone. Use for: 'what time does the switch think it is', verifying clock after NTP checks. Runs 'show clock'.", "show clock", "text"},
+	{"inventory", "chassis, line cards, PSUs, optics with serials", "show inventory", "json"},
+	{"reload_cause", "", "show reload cause", "json"},
+	{"hardware_capacity", "ASIC/TCAM table utilization against limits", "show hardware capacity", "json"},
+	{"clock", "", "show clock", "text"},
 
 	// QoS.
-	{"get_qos_interfaces", "Per-interface QoS state: trust mode, default CoS/DSCP, shaping, and tx-queue mapping. Use for: QoS classification/queuing questions, 'how is QoS applied to a port'. Runs 'show qos interfaces'.", "show qos interfaces", "json"},
+	{"qos_interfaces", "per-port QoS trust mode, shaping, tx-queue mapping", "show qos interfaces", "json"},
 
 	// Storm control.
-	{"get_storm_control", "Broadcast/multicast/unknown-unicast storm-control thresholds and current state per interface. Use for: storm-control config, suppressed traffic, 'is a port being rate-limited for broadcast'. Runs 'show storm-control'.", "show storm-control", "json"},
+	{"storm_control", "broadcast/multicast suppression thresholds per port", "show storm-control", "json"},
 
 	// DHCP relay.
-	{"get_dhcp_relay", "IPv4 DHCP relay (helper-address) configuration and status. Use for: 'where are DHCP requests forwarded', relay helper addresses, DHCP onboarding issues. Runs 'show ip dhcp relay'.", "show ip dhcp relay", "json"},
+	{"dhcp_relay", "DHCP helper-address configuration", "show ip dhcp relay", "json"},
 
 	// sFlow.
-	{"get_sflow", "sFlow sampling status: collectors, sample rate, polling interval, datagrams sent. Use for: telemetry/flow-export health, 'is sFlow running and where does it send'. Runs 'show sflow'.", "show sflow", "json"},
+	{"sflow", "sFlow collectors, sample rate, datagrams sent", "show sflow", "json"},
 
 	// First-hop redundancy (VRRP / VARP).
-	{"get_vrrp", "VRRP group state per interface: master/backup role, virtual IP, priority, VRID. Use for: first-hop redundancy, 'who is the active gateway', VRRP failover. Runs 'show vrrp'.", "show vrrp", "json"},
-	{"get_varp", "VARP (virtual-router / anycast gateway) virtual IP and MAC addresses. Use for: distributed anycast gateways in EVPN/VXLAN fabrics, 'what is the shared gateway IP/MAC'. Runs 'show ip virtual-router'.", "show ip virtual-router", "json"},
+	{"vrrp", "first-hop redundancy: master/backup role, virtual IP", "show vrrp", "json"},
+	{"varp", "anycast gateway virtual IP/MAC (EVPN/VXLAN fabrics)", "show ip virtual-router", "json"},
 
 	// PTP (Precision Time Protocol).
-	{"get_ptp", "PTP clock state: domain, profile, parent/grandmaster, offset-from-master, and port roles. Use for: hardware timing/sync health, 'is PTP locked', clock offset. Runs 'show ptp'.", "show ptp", "json"},
+	{"ptp", "PTP clock: grandmaster, offset-from-master, port roles", "show ptp", "json"},
 
 	// AAA / TACACS+ / RADIUS.
-	{"get_aaa", "AAA configuration: authentication/authorization/accounting method lists and server groups. Use for: 'how is login auth configured', AAA method order. Runs 'show aaa'.", "show aaa", "json"},
-	{"get_tacacs", "TACACS+ server status and counters (reachability, requests, failures). Use for: 'are TACACS servers reachable', login auth failures, AAA backend health. Runs 'show tacacs'.", "show tacacs", "json"},
-	{"get_radius", "RADIUS server status and counters (reachability, requests, failures). Use for: 'are RADIUS servers reachable', auth/accounting backend health. Runs 'show radius'.", "show radius", "json"},
+	{"aaa", "authentication/authorization/accounting method lists", "show aaa", "json"},
+	{"tacacs", "TACACS+ server reachability and counters", "show tacacs", "json"},
+	{"radius", "RADIUS server reachability and counters", "show radius", "json"},
 
 	// SNMP.
-	{"get_snmp", "SNMP agent status: enabled state, communities/contexts, and engine info. Use for: 'is SNMP enabled', monitoring/polling setup. Runs 'show snmp'.", "show snmp", "json"},
-	{"get_snmp_host", "Configured SNMP trap/notification hosts (collectors) and versions. Use for: 'where are SNMP traps sent', trap-receiver config. Runs 'show snmp notification host'.", "show snmp notification host", "json"},
+	{"snmp", "", "show snmp", "json"},
+	{"snmp_host", "configured SNMP trap/notification receivers", "show snmp notification host", "json"},
 
 	// MACsec.
-	{"get_macsec", "MACsec status per interface: enabled state, profile, and key-server. Use for: 'is link encryption up', MACsec session health. Runs 'show mac security interface'.", "show mac security interface", "json"},
-	{"get_macsec_counters", "MACsec traffic and protection counters (encrypted/decrypted, protected/unprotected, errors). Use for: MACsec troubleshooting, integrity/decrypt failures. Runs 'show mac security counters'.", "show mac security counters", "json"},
+	{"macsec", "link-encryption status per interface", "show mac security interface", "json"},
+	{"macsec_counters", "MACsec encrypted/protected counters and errors", "show mac security counters", "json"},
 
 	// Tunnels (GRE / generic).
-	{"get_tunnel_fib", "Tunnel forwarding table (FIB): GRE/VXLAN/MPLS tunnel entries with next-hops and types. Use for: 'what tunnels are programmed', overlay/underlay tunnel forwarding. Runs 'show tunnel fib'.", "show tunnel fib", "json"},
+	{"tunnel_fib", "GRE/VXLAN/MPLS tunnel forwarding entries", "show tunnel fib", "json"},
 
 	// MPLS / LDP.
-	{"get_mpls_lfib", "MPLS label forwarding table (LFIB): in/out labels, FEC, next-hops. Use for: 'how is label X forwarded', MPLS data-plane. Runs 'show mpls lfib route'.", "show mpls lfib route", "json"},
-	{"get_ldp_neighbors", "LDP (Label Distribution Protocol) neighbor/session state. Use for: 'are LDP sessions up', label-distribution adjacencies. Runs 'show mpls ldp neighbor'.", "show mpls ldp neighbor", "json"},
+	{"mpls_lfib", "MPLS label forwarding: in/out labels, FEC", "show mpls lfib route", "json"},
+	{"ldp_neighbors", "LDP label-distribution session state", "show mpls ldp neighbor", "json"},
 
 	// VXLAN counters.
-	{"get_vxlan_counters", "Per-VTEP VXLAN encap/decap packet and byte counters. Use for: overlay traffic volume, 'is VXLAN traffic flowing', encap/decap drops. Runs 'show vxlan counters vtep'.", "show vxlan counters vtep", "json"},
+	{"vxlan_counters", "per-VTEP encap/decap packet and byte counters", "show vxlan counters vtep", "json"},
 }
 
-func registerShowCatalog(s *mcp.Server, mgr *manager.Manager) {
+// showTopics indexes showCatalog by topic for dispatch.
+var showTopics = func() map[string]showSpec {
+	m := make(map[string]showSpec, len(showCatalog))
 	for _, spec := range showCatalog {
-		spec := spec
-		mcp.AddTool(s, &mcp.Tool{Name: spec.name, Description: spec.desc},
-			func(ctx context.Context, _ *mcp.CallToolRequest, args deviceArgs) (*mcp.CallToolResult, any, error) {
-				return runEAPICommand(mgr, args.Device, spec.command, spec.encoding)
-			})
+		m[spec.topic] = spec
 	}
+	return m
+}()
 
-	// get_ip_route accepts an optional prefix and VRF.
+// showDataDescription is assembled once from showCatalog in declared order.
+// It must never be built by ranging over a map: Go randomizes map order per
+// process, which would make the tool definition differ between restarts and
+// defeat client-side prompt caching.
+var showDataDescription = func() string {
+	var b strings.Builder
+	b.WriteString("Fetch a curated read-only EOS dataset by topic. Most topic names say what they " +
+		"return (e.g. 'vlans', 'mac_address_table', 'arp_table'). For the IPv4 routing table with an " +
+		"optional prefix/VRF filter use get_ip_route; for anything with no topic use run_show_command. " +
+		"Hints for the less obvious topics:")
+	for _, spec := range showCatalog {
+		if spec.hint == "" {
+			continue
+		}
+		fmt.Fprintf(&b, "\n%s: %s", spec.topic, spec.hint)
+	}
+	return b.String()
+}()
+
+// buildShowDataSchema hand-writes the input schema so that topic can be a real
+// JSON Schema enum. Struct tags only produce descriptions (jsonschema-go has no
+// enum tag syntax), but the SDK skips reflection entirely when Tool.InputSchema
+// is set and validates incoming arguments against the schema given here — so an
+// invalid topic is rejected with the full list of valid values.
+func buildShowDataSchema() *jsonschema.Schema {
+	enum := make([]any, len(showCatalog))
+	for i, spec := range showCatalog {
+		enum[i] = spec.topic
+	}
+	return &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"topic":  {Type: "string", Enum: enum, Description: "which dataset to fetch"},
+			"device": {Type: "string", Description: shortDeviceDesc},
+		},
+		Required: []string{"topic"},
+		// Matches the additionalProperties:false that reflected schemas get.
+		AdditionalProperties: &jsonschema.Schema{Not: &jsonschema.Schema{}},
+	}
+}
+
+type showDataArgs struct {
+	Topic  string `json:"topic"`
+	Device string `json:"device,omitempty"`
+}
+
+func registerShowDataTool(s *mcp.Server, mgr *manager.Manager) {
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "get_show_data",
+		Description: showDataDescription,
+		InputSchema: buildShowDataSchema(),
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, args showDataArgs) (*mcp.CallToolResult, any, error) {
+		spec, ok := showTopics[args.Topic]
+		if !ok {
+			// The enum already rejects this during validation; belt and braces.
+			return nil, nil, fmt.Errorf("unknown topic %q", args.Topic)
+		}
+		return runEAPICommand(mgr, args.Device, spec.command, spec.encoding)
+	})
+}
+
+// registerIPRoute keeps get_ip_route a tool of its own: it takes prefix and VRF
+// filters that don't fit get_show_data's uniform topic+device shape.
+func registerIPRoute(s *mcp.Server, mgr *manager.Manager) {
 	type routeArgs struct {
-		Device string `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
+		Device string `json:"device,omitempty" jsonschema:"target device (IP preferred; name/hostname OK); optional if only one device is configured"`
 		Prefix string `json:"prefix,omitempty" jsonschema:"optional IPv4 prefix or address to look up, e.g. '10.0.0.0/24'"`
 		VRF    string `json:"vrf,omitempty" jsonschema:"optional VRF name"`
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "get_ip_route",
-		Description: "IPv4 routing table (FIB/RIB). Use for: 'how does it reach X', next-hop, default route, route to a prefix, VRF routing. Optionally filter by prefix and/or VRF. Runs 'show ip route'.",
+		Description: "IPv4 routing table (FIB/RIB). Use for: 'how does it reach X', next-hop, default route, route to a prefix, VRF routing. Optionally filter by prefix and/or VRF.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args routeArgs) (*mcp.CallToolResult, any, error) {
 		cmd := "show ip route"
 		if v := strings.TrimSpace(args.VRF); v != "" {

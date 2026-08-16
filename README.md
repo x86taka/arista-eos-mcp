@@ -9,8 +9,8 @@ configuration or device state is rejected before it reaches the device.
 
 ## Features
 
-- eAPI tools: `run_show_command`, `get_version`, `get_interfaces`,
-  `get_running_config`, `get_lldp_neighbors`, `get_bgp_summary`
+- eAPI tools: `get_show_data` (57 curated read-only datasets behind one `topic`
+  argument), `run_show_command`, `get_interfaces`, `get_running_config`
 - gNMI tools: `gnmi_get`, `gnmi_capabilities`
 - Safety guard that rejects `configure`, `write`, `copy`, `reload`, `clear`,
   `no ...`, `bash`, and other state-changing commands in read-only mode
@@ -329,36 +329,84 @@ the target by name (required when more than one device is configured).
 
 **Inventory & generic**
 
-| Tool                | Description                                          |
-| ------------------- | ---------------------------------------------------- |
-| `list_devices`      | List configured device names                         |
-| `run_show_command`  | Run any read-only command (`json` or `text` output)  |
+| Tool                 | Description                                                  |
+| -------------------- | ------------------------------------------------------------ |
+| `list_devices`       | List configured device names                                  |
+| `get_show_data`      | Fetch a curated read-only dataset by `topic` (see table below) |
+| `run_show_command`   | Run any read-only command (`json` or `text` output)           |
+| `get_running_config` | Running configuration as text                                 |
+| `get_interfaces`     | `show interfaces` (optional interface filter)                 |
+| `get_ip_route`       | `show ip route` (optional prefix / VRF filter)                |
 
-**Curated read-only show tools** (eAPI)
+**`get_show_data` topics** (eAPI)
 
-| Tool                     | Command                          |
-| ------------------------ | -------------------------------- |
-| `get_version`            | `show version`                   |
-| `get_running_config`     | running configuration as text    |
-| `get_interfaces`         | `show interfaces` (opt. filter)  |
-| `get_interfaces_status`  | `show interfaces status`         |
-| `get_interface_counters` | `show interfaces counters`       |
-| `get_mac_address_table`  | `show mac address-table`         |
-| `get_arp_table`          | `show ip arp`                    |
-| `get_ip_route`           | `show ip route` (opt. prefix/VRF)|
-| `get_vlans`              | `show vlan`                      |
-| `get_lldp_neighbors`     | `show lldp neighbors`            |
-| `get_port_channels`      | `show port-channel summary`      |
-| `get_mlag`               | `show mlag`                      |
-| `get_spanning_tree`      | `show spanning-tree`             |
-| `get_bgp_summary`        | `show ip bgp summary`            |
-| `get_bgp_neighbors`      | `show ip bgp neighbors`          |
-| `get_ospf_neighbors`     | `show ip ospf neighbor`          |
-| `get_transceivers`       | `show interfaces transceiver`    |
-| `get_environment`        | `show environment all`           |
-| `get_ntp_status`         | `show ntp status`                |
-| `get_logging`            | `show logging last 100`          |
-| `get_processes`          | `show processes top once`        |
+`get_show_data` replaces what used to be 57 individual `get_*` tools. Collapsing
+them into one tool with a `topic` enum cut the `tools/list` payload every client
+puts in the model's context from ~42 kB to ~14 kB.
+
+```json
+{ "topic": "bgp_summary", "device": "192.0.2.10" }
+```
+
+| Topic                  | Command                        |
+| ---------------------- | ------------------------------ |
+| `version`              | `show version`                 |
+| `interfaces_status`    | `show interfaces status`       |
+| `interface_counters`   | `show interfaces counters`     |
+| `mac_address_table`    | `show mac address-table`       |
+| `arp_table`            | `show ip arp`                  |
+| `vlans`                | `show vlan`                    |
+| `lldp_neighbors`       | `show lldp neighbors`          |
+| `port_channels`        | `show port-channel summary`    |
+| `mlag`                 | `show mlag`                    |
+| `spanning_tree`        | `show spanning-tree`           |
+| `bgp_summary`          | `show ip bgp summary`          |
+| `bgp_neighbors`        | `show ip bgp neighbors`        |
+| `ospf_neighbors`       | `show ip ospf neighbor`        |
+| `transceivers`         | `show interfaces transceiver`  |
+| `environment`          | `show environment all`         |
+| `ntp_status`           | `show ntp status`              |
+| `logging`              | `show logging last 100`        |
+| `processes`            | `show processes top once`      |
+| `vxlan_interface`      | `show interfaces vxlan 1`      |
+| `vxlan_vtep`           | `show vxlan vtep`              |
+| `vxlan_address_table`  | `show vxlan address-table`     |
+| `bgp_evpn_summary`     | `show bgp evpn summary`        |
+| `bgp_evpn`             | `show bgp evpn`                |
+| `ip_interface_brief`   | `show ip interface brief`      |
+| `vrfs`                 | `show vrf`                     |
+| `bfd_peers`            | `show bfd peers`               |
+| `ipv6_neighbors`       | `show ipv6 neighbors`          |
+| `ipv6_route`           | `show ipv6 route`              |
+| `route_summary`        | `show ip route summary`        |
+| `ospf`                 | `show ip ospf`                 |
+| `isis_neighbors`       | `show isis neighbors`          |
+| `pim_neighbors`        | `show ip pim neighbor`         |
+| `igmp_snooping_groups` | `show ip igmp snooping groups` |
+| `lacp_peers`           | `show lacp peer`               |
+| `ip_access_lists`      | `show ip access-lists`         |
+| `inventory`            | `show inventory`               |
+| `reload_cause`         | `show reload cause`            |
+| `hardware_capacity`    | `show hardware capacity`       |
+| `clock`                | `show clock`                   |
+| `qos_interfaces`       | `show qos interfaces`          |
+| `storm_control`        | `show storm-control`           |
+| `dhcp_relay`           | `show ip dhcp relay`           |
+| `sflow`                | `show sflow`                   |
+| `vrrp`                 | `show vrrp`                    |
+| `varp`                 | `show ip virtual-router`       |
+| `ptp`                  | `show ptp`                     |
+| `aaa`                  | `show aaa`                     |
+| `tacacs`               | `show tacacs`                  |
+| `radius`               | `show radius`                  |
+| `snmp`                 | `show snmp`                    |
+| `snmp_host`            | `show snmp notification host`  |
+| `macsec`               | `show mac security interface`  |
+| `macsec_counters`      | `show mac security counters`   |
+| `tunnel_fib`           | `show tunnel fib`              |
+| `mpls_lfib`            | `show mpls lfib route`         |
+| `ldp_neighbors`        | `show mpls ldp neighbor`       |
+| `vxlan_counters`       | `show vxlan counters vtep`     |
 
 **Aggregation & diagnostics**
 

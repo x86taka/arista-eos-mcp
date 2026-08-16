@@ -95,7 +95,7 @@ func formatFleet(command string, results []fleetResult) string {
 
 func registerFleetTools(s *mcp.Server, mgr *manager.Manager) {
 	type fleetCmdArgs struct {
-		Devices  []string `json:"devices,omitempty" jsonschema:"target devices, each given as its management IPv4 address (e.g. '192.0.2.10'); a configured device name also works, but do NOT pass a hostname. Empty means all configured devices"`
+		Devices  []string `json:"devices,omitempty" jsonschema:"target devices (IP preferred); empty means all configured devices"`
 		Command  string   `json:"command" jsonschema:"the read-only command to run on each device, e.g. 'show version'"`
 		Encoding string   `json:"encoding,omitempty" jsonschema:"response encoding: 'json' (default) or 'text'"`
 	}
@@ -118,7 +118,7 @@ func registerFleetTools(s *mcp.Server, mgr *manager.Manager) {
 	})
 
 	type fleetDevArgs struct {
-		Devices []string `json:"devices,omitempty" jsonschema:"target devices, each given as its management IPv4 address (e.g. '192.0.2.10'); a configured device name also works, but do NOT pass a hostname. Empty means all configured devices"`
+		Devices []string `json:"devices,omitempty" jsonschema:"target devices (IP preferred); empty means all configured devices"`
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "fleet_get_version",

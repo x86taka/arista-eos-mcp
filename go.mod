@@ -4,6 +4,7 @@ go 1.26.4
 
 require (
 	github.com/aristanetworks/goeapi v1.0.0
+	github.com/google/jsonschema-go v0.4.3
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/openconfig/gnmic/pkg/api v0.1.11
 	google.golang.org/grpc v1.79.3
@@ -15,7 +16,6 @@ require (
 	github.com/AlekSi/pointer v1.2.0 // indirect
 	github.com/bufbuild/protocompile v0.14.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/jhump/protoreflect v1.17.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/openconfig/gnmi v0.14.1 // indirect

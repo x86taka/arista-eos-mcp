@@ -31,9 +31,10 @@ Choosing a target device:
    or no device argument at all (list_devices).
 
 Choosing a tool:
-- Prefer the most SPECIFIC tool for the data you need (e.g. "get_bgp_summary",
-  "get_interfaces", "get_mac_address_table") instead of "run_show_command".
-- Use "run_show_command" only for read-only commands that have no dedicated tool.
+- "get_show_data" covers the curated read-only datasets: pass a "topic" from its
+  enum (e.g. "bgp_summary", "interfaces_status", "mac_address_table"). Prefer it,
+  or another specific tool, over "run_show_command".
+- Use "run_show_command" only for read-only commands no topic or tool covers.
 - For ONE command across MANY devices, use "fleet_run_command" / "fleet_get_version".
 - To diff TWO devices, use "compare_config" or "compare_command".
 - For an overall status check of one device, use "get_device_health".
