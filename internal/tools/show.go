@@ -41,9 +41,13 @@ var showCatalog = []showSpec{
 	{"bgp_neighbors", "per-neighbor BGP detail; use after bgp_summary", "show ip bgp neighbors", "json"},
 	{"ospf_neighbors", "", "show ip ospf neighbor", "json"},
 	{"transceivers", "optic/SFP DOM: Rx/Tx light levels", "show interfaces transceiver", "json"},
-	{"environment", "power supplies, fans, temperatures", "show environment all", "json"},
+	// "show environment all" is rejected by EOS; the command is "show system
+	// environment all", which has no JSON form and so is fetched as text.
+	{"environment", "power supplies, fans, temperatures", "show system environment all", "text"},
 	{"ntp_status", "", "show ntp status", "text"},
-	{"logging", "100 most recent syslog messages", "show logging last 100", "text"},
+	// "show logging last <n>" needs a time unit (seconds/minutes/hours/days);
+	// a plain count is "show logging <n>".
+	{"logging", "100 most recent syslog messages", "show logging 100", "text"},
 	{"processes", "per-process CPU and memory snapshot", "show processes top once", "text"},
 	{"vxlan_interface", "VNI-to-VLAN/VRF mappings and VTEP source interface", "show interfaces vxlan 1", "json"},
 	{"vxlan_vtep", "remote VTEPs this switch has learned", "show vxlan vtep", "json"},
@@ -63,7 +67,7 @@ var showCatalog = []showSpec{
 
 	// Multicast.
 	{"pim_neighbors", "PIM multicast routing adjacencies", "show ip pim neighbor", "json"},
-	{"igmp_snooping_groups", "which ports joined which multicast groups", "show ip igmp snooping groups", "json"},
+	{"igmp_snooping_groups", "which ports joined which multicast groups", "show ip igmp snooping groups", "text"},
 
 	// Aggregation / L2 detail.
 	{"lacp_peers", "LACP partner detail; pair with port_channels", "show lacp peer", "json"},
@@ -81,7 +85,7 @@ var showCatalog = []showSpec{
 	{"qos_interfaces", "per-port QoS trust mode, shaping, tx-queue mapping", "show qos interfaces", "json"},
 
 	// Storm control.
-	{"storm_control", "broadcast/multicast suppression thresholds per port", "show storm-control", "json"},
+	{"storm_control", "broadcast/multicast suppression thresholds per port", "show storm-control", "text"},
 
 	// DHCP relay.
 	{"dhcp_relay", "DHCP helper-address configuration", "show ip dhcp relay", "json"},
@@ -101,8 +105,8 @@ var showCatalog = []showSpec{
 	{"tacacs", "TACACS+ server reachability and counters", "show tacacs", "json"},
 	{"radius", "RADIUS server reachability and counters", "show radius", "json"},
 
-	// SNMP.
-	{"snmp", "", "show snmp", "json"},
+	// SNMP. "show snmp" has no JSON form; the notification-host view does.
+	{"snmp", "", "show snmp", "text"},
 	{"snmp_host", "configured SNMP trap/notification receivers", "show snmp notification host", "json"},
 
 	// MACsec.
@@ -116,8 +120,9 @@ var showCatalog = []showSpec{
 	{"mpls_lfib", "MPLS label forwarding: in/out labels, FEC", "show mpls lfib route", "json"},
 	{"ldp_neighbors", "LDP label-distribution session state", "show mpls ldp neighbor", "json"},
 
-	// VXLAN counters.
-	{"vxlan_counters", "per-VTEP encap/decap packet and byte counters", "show vxlan counters vtep", "json"},
+	// VXLAN counters. EOS has no "show vxlan counters" command; the counters
+	// live on the VXLAN interface.
+	{"vxlan_counters", "VXLAN tunnel-interface packet and byte counters", "show interfaces vxlan 1 counters", "json"},
 }
 
 // showTopics indexes showCatalog by topic for dispatch.

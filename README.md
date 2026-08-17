@@ -364,9 +364,9 @@ puts in the model's context from ~42 kB to ~14 kB.
 | `bgp_neighbors`        | `show ip bgp neighbors`        |
 | `ospf_neighbors`       | `show ip ospf neighbor`        |
 | `transceivers`         | `show interfaces transceiver`  |
-| `environment`          | `show environment all`         |
+| `environment`          | `show system environment all`  |
 | `ntp_status`           | `show ntp status`              |
-| `logging`              | `show logging last 100`        |
+| `logging`              | `show logging 100`             |
 | `processes`            | `show processes top once`      |
 | `vxlan_interface`      | `show interfaces vxlan 1`      |
 | `vxlan_vtep`           | `show vxlan vtep`              |
@@ -406,7 +406,7 @@ puts in the model's context from ~42 kB to ~14 kB.
 | `tunnel_fib`           | `show tunnel fib`              |
 | `mpls_lfib`            | `show mpls lfib route`         |
 | `ldp_neighbors`        | `show mpls ldp neighbor`       |
-| `vxlan_counters`       | `show vxlan counters vtep`     |
+| `vxlan_counters`       | `show interfaces vxlan 1 counters` |
 
 **Aggregation & diagnostics**
 
