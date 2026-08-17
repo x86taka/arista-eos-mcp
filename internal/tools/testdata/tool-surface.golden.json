@@ -1,0 +1,538 @@
+{
+  "instructions": "This server provides access to Arista EOS switches over eAPI and gNMI.\nWhen EOS_READ_ONLY=true (default), it cannot change configuration; state-changing commands are rejected.\n\nChoosing a target device:\n- Most tools take a \"device\" argument. Prefer an IP address (e.g. \"192.0.2.10\").\n  A configured device name or hostname also works. It is optional only when a\n  single device is configured; fleet_* tools target many devices and list_devices takes no device.\n- Some tools instead use \"devices\" (fleet_*), \"device_a\"/\"device_b\" (compare_*),\n   or no device argument at all (list_devices).\n\nChoosing a tool:\n- \"get_show_data\" covers the curated read-only datasets: pass a \"topic\" from its\n  enum (e.g. \"bgp_summary\", \"interfaces_status\", \"mac_address_table\"). Prefer it,\n  or another specific tool, over \"run_show_command\".\n- Use \"run_show_command\" only for read-only commands no topic or tool covers.\n- For ONE command across MANY devices, use \"fleet_run_command\" / \"fleet_get_version\".\n- To diff TWO devices, use \"compare_config\" or \"compare_command\".\n- For an overall status check of one device, use \"get_device_health\".\n- For reachability tests use \"ping_host\" / \"traceroute_host\".\n- For model-driven telemetry or to watch values over time, use the gNMI tools\n  (\"gnmi_get\" for a snapshot, \"gnmi_subscribe\" for a time window).\n\nThe \"troubleshoot_*\", \"device_health_review\", and \"compare_devices\" prompts\nprovide ready-made investigation workflows.",
+  "tools": [
+    {
+      "description": "Run the SAME command on TWO devices and diff the output lines. Use to compare specific state between a pair (e.g. 'show vlan', 'show ip bgp summary'). For full config use compare_config; for many devices use fleet_run_command.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "description": "the read-only command to run on both devices, e.g. 'show vlan'",
+            "type": "string"
+          },
+          "device_a": {
+            "description": "first device (IP preferred)",
+            "type": "string"
+          },
+          "device_b": {
+            "description": "second device (IP preferred)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_a",
+          "device_b",
+          "command"
+        ],
+        "type": "object"
+      },
+      "name": "compare_command"
+    },
+    {
+      "description": "Diff the running-config of TWO devices and report lines unique to each. Use for 'what's different between A and B', config drift, consistency checks across a pair.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "device_a": {
+            "description": "first device (IP preferred)",
+            "type": "string"
+          },
+          "device_b": {
+            "description": "second device (IP preferred)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_a",
+          "device_b"
+        ],
+        "type": "object"
+      },
+      "name": "compare_config"
+    },
+    {
+      "description": "Collect version/model/uptime from MANY devices (or all) in parallel. Use for fleet-wide inventory: 'what EOS version is everything running', model audit.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "devices": {
+            "description": "target devices (IP preferred); empty means all configured devices",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "name": "fleet_get_version"
+    },
+    {
+      "description": "Run the SAME command on MANY devices (or all) in parallel and return a combined per-device report. Use for 'on all switches', 'across the fleet', bulk/sweep queries. For just two devices and a diff, use compare_command.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "description": "the read-only command to run on each device, e.g. 'show version'",
+            "type": "string"
+          },
+          "devices": {
+            "description": "target devices (IP preferred); empty means all configured devices",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "encoding": {
+            "description": "response encoding: 'json' (default) or 'text'",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "type": "object"
+      },
+      "name": "fleet_run_command"
+    },
+    {
+      "description": "Prefixes this device ADVERTISES to a specific BGP neighbor. Use for 'what are we sending to peer X', outbound policy checks. Runs 'show ip bgp neighbors \u003cip\u003e advertised-routes'.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          },
+          "neighbor": {
+            "description": "BGP neighbor IP address",
+            "type": "string"
+          }
+        },
+        "required": [
+          "neighbor"
+        ],
+        "type": "object"
+      },
+      "name": "get_bgp_advertised_routes"
+    },
+    {
+      "description": "Prefixes RECEIVED from a specific BGP neighbor. Use for 'what is peer X sending us', inbound route/policy checks. Runs 'show ip bgp neighbors \u003cip\u003e received-routes'.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          },
+          "neighbor": {
+            "description": "BGP neighbor IP address",
+            "type": "string"
+          }
+        },
+        "required": [
+          "neighbor"
+        ],
+        "type": "object"
+      },
+      "name": "get_bgp_received_routes"
+    },
+    {
+      "description": "One-shot overall health check of a SINGLE device: aggregates version, environment, interface status, port-channels, MLAG, and BGP into one report. Use for open-ended 'is this device healthy / what's its status' questions before drilling into a specific area.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "get_device_health"
+    },
+    {
+      "description": "Full per-interface detail (state, counters, addresses, MTU, description). Use for a deep look at one or all interfaces; optionally filter by interface name. For a quick up/down overview prefer get_show_data topic 'interfaces_status'.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          },
+          "interface": {
+            "description": "optional interface name to filter, e.g. 'Ethernet1'",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "get_interfaces"
+    },
+    {
+      "description": "IPv4 routing table (FIB/RIB). Use for: 'how does it reach X', next-hop, default route, route to a prefix, VRF routing. Optionally filter by prefix and/or VRF.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          },
+          "prefix": {
+            "description": "optional IPv4 prefix or address to look up, e.g. '10.0.0.0/24'",
+            "type": "string"
+          },
+          "vrf": {
+            "description": "optional VRF name",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "get_ip_route"
+    },
+    {
+      "description": "Full running configuration as text. Use for: 'show me the config', auditing settings, finding how something is configured. For comparing two devices' configs use compare_config instead.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "get_running_config"
+    },
+    {
+      "description": "Fetch a curated read-only EOS dataset by topic. Most topic names say what they return (e.g. 'vlans', 'mac_address_table', 'arp_table'). For the IPv4 routing table with an optional prefix/VRF filter use get_ip_route; for anything with no topic use run_show_command. Hints for the less obvious topics:\nversion: EOS version, model, serial number, uptime\ninterface_counters: traffic and error counters: drops, discards, CRC\nport_channels: LAG/EtherChannel summary and member state\nbgp_summary: BGP IPv4 session states and prefix counts; start here for BGP\nbgp_neighbors: per-neighbor BGP detail; use after bgp_summary\ntransceivers: optic/SFP DOM: Rx/Tx light levels\nenvironment: power supplies, fans, temperatures\nlogging: 100 most recent syslog messages\nprocesses: per-process CPU and memory snapshot\nvxlan_interface: VNI-to-VLAN/VRF mappings and VTEP source interface\nvxlan_vtep: remote VTEPs this switch has learned\nvxlan_address_table: remote MAC to VTEP/VNI forwarding table\nbgp_evpn_summary: EVPN control-plane session states; start here for EVPN\nbgp_evpn: EVPN routes (Type-2/3/5); use after bgp_evpn_summary\nip_interface_brief: L3 interfaces with their IPv4 addresses\nbfd_peers: BFD fast-failure-detection session state\nroute_summary: route counts by protocol (RIB scale)\nospf: OSPF process, areas, timers; pair with ospf_neighbors\npim_neighbors: PIM multicast routing adjacencies\nigmp_snooping_groups: which ports joined which multicast groups\nlacp_peers: LACP partner detail; pair with port_channels\nip_access_lists: IPv4 ACL rules with hit counters\ninventory: chassis, line cards, PSUs, optics with serials\nhardware_capacity: ASIC/TCAM table utilization against limits\nqos_interfaces: per-port QoS trust mode, shaping, tx-queue mapping\nstorm_control: broadcast/multicast suppression thresholds per port\ndhcp_relay: DHCP helper-address configuration\nsflow: sFlow collectors, sample rate, datagrams sent\nvrrp: first-hop redundancy: master/backup role, virtual IP\nvarp: anycast gateway virtual IP/MAC (EVPN/VXLAN fabrics)\nptp: PTP clock: grandmaster, offset-from-master, port roles\naaa: authentication/authorization/accounting method lists\ntacacs: TACACS+ server reachability and counters\nradius: RADIUS server reachability and counters\nsnmp_host: configured SNMP trap/notification receivers\nmacsec: link-encryption status per interface\nmacsec_counters: MACsec encrypted/protected counters and errors\ntunnel_fib: GRE/VXLAN/MPLS tunnel forwarding entries\nmpls_lfib: MPLS label forwarding: in/out labels, FEC\nldp_neighbors: LDP label-distribution session state\nvxlan_counters: per-VTEP encap/decap packet and byte counters",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          },
+          "topic": {
+            "description": "which dataset to fetch",
+            "enum": [
+              "version",
+              "interfaces_status",
+              "interface_counters",
+              "mac_address_table",
+              "arp_table",
+              "vlans",
+              "lldp_neighbors",
+              "port_channels",
+              "mlag",
+              "spanning_tree",
+              "bgp_summary",
+              "bgp_neighbors",
+              "ospf_neighbors",
+              "transceivers",
+              "environment",
+              "ntp_status",
+              "logging",
+              "processes",
+              "vxlan_interface",
+              "vxlan_vtep",
+              "vxlan_address_table",
+              "bgp_evpn_summary",
+              "bgp_evpn",
+              "ip_interface_brief",
+              "vrfs",
+              "bfd_peers",
+              "ipv6_neighbors",
+              "ipv6_route",
+              "route_summary",
+              "ospf",
+              "isis_neighbors",
+              "pim_neighbors",
+              "igmp_snooping_groups",
+              "lacp_peers",
+              "ip_access_lists",
+              "inventory",
+              "reload_cause",
+              "hardware_capacity",
+              "clock",
+              "qos_interfaces",
+              "storm_control",
+              "dhcp_relay",
+              "sflow",
+              "vrrp",
+              "varp",
+              "ptp",
+              "aaa",
+              "tacacs",
+              "radius",
+              "snmp",
+              "snmp_host",
+              "macsec",
+              "macsec_counters",
+              "tunnel_fib",
+              "mpls_lfib",
+              "ldp_neighbors",
+              "vxlan_counters"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "type": "object"
+      },
+      "name": "get_show_data"
+    },
+    {
+      "description": "List the device's gNMI capabilities (supported YANG models, encodings, versions). Use to discover what gNMI paths/models are available before gnmi_get/gnmi_subscribe.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "gnmi_capabilities"
+    },
+    {
+      "description": "Fetch model-driven (OpenConfig) state/config via a gNMI Get for specific paths, returned as JSON. Use when the user asks for gNMI/OpenConfig data or a structured value at a known path. For CLI-style data prefer the get_* show tools.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data_type": {
+            "description": "data type: 'all' (default), 'config', 'state', 'operational'",
+            "type": "string"
+          },
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          },
+          "encoding": {
+            "description": "encoding: 'json_ietf' (default), 'json', 'ascii', 'proto'",
+            "type": "string"
+          },
+          "paths": {
+            "description": "gNMI paths to retrieve, e.g. ['/interfaces/interface/state']",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "paths"
+        ],
+        "type": "object"
+      },
+      "name": "gnmi_get"
+    },
+    {
+      "description": "Watch gNMI paths OVER TIME and collect telemetry updates for a bounded window, then return them. Use when the user wants to observe change/trend/live values (e.g. counters increasing, a flapping state). Modes: 'once' (single snapshot), 'sample' (periodic), 'on-change' (events). For a one-shot value use gnmi_get.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          },
+          "max_updates": {
+            "description": "cap on number of updates to collect (default 500)",
+            "type": "integer"
+          },
+          "mode": {
+            "description": "subscription mode: 'on-change' (default), 'sample', or 'once'",
+            "type": "string"
+          },
+          "paths": {
+            "description": "gNMI paths to subscribe to, e.g. ['/interfaces/interface/state/counters']",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "sample_seconds": {
+            "description": "sample interval in seconds for 'sample' mode (default 10)",
+            "type": "integer"
+          },
+          "window_seconds": {
+            "description": "how long to collect updates, in seconds (default 15, max 60)",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "paths"
+        ],
+        "type": "object"
+      },
+      "name": "gnmi_subscribe"
+    },
+    {
+      "description": "List the configured EOS devices and whether ad-hoc hosts are allowed. Call this FIRST when you don't know which devices exist or what to pass as 'device'.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "type": "object"
+      },
+      "name": "list_devices"
+    },
+    {
+      "description": "Ping a destination FROM a device to test reachability/latency. Use for 'can A reach B', connectivity checks, packet loss. Optional count/vrf/source.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "description": "number of echo requests (default 5)",
+            "type": "integer"
+          },
+          "destination": {
+            "description": "IP address or hostname to ping",
+            "type": "string"
+          },
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          },
+          "source": {
+            "description": "optional source interface or address",
+            "type": "string"
+          },
+          "vrf": {
+            "description": "optional VRF name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "destination"
+        ],
+        "type": "object"
+      },
+      "name": "ping_host"
+    },
+    {
+      "description": "Escape hatch: run an arbitrary read-only EOS command over eAPI. Use ONLY when no get_show_data topic or dedicated tool fits the request — prefer those (they return cleaner data). Write/config commands are rejected.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "description": "the read-only EOS command to run, e.g. 'show version'",
+            "type": "string"
+          },
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          },
+          "encoding": {
+            "description": "response encoding: 'json' (default) or 'text'",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "type": "object"
+      },
+      "name": "run_show_command"
+    },
+    {
+      "description": "Traceroute from a device to a destination to see the hop-by-hop path. Use for 'what path does traffic take', locating where reachability breaks. Optional vrf.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "destination": {
+            "description": "IP address or hostname to trace",
+            "type": "string"
+          },
+          "device": {
+            "description": "target device (IP preferred; name/hostname OK); optional if only one device is configured",
+            "type": "string"
+          },
+          "vrf": {
+            "description": "optional VRF name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "destination"
+        ],
+        "type": "object"
+      },
+      "name": "traceroute_host"
+    }
+  ],
+  "prompts": [
+    {
+      "arguments": [
+        {
+          "name": "device_a",
+          "description": "first device name",
+          "required": true
+        },
+        {
+          "name": "device_b",
+          "description": "second device name",
+          "required": true
+        }
+      ],
+      "description": "Compare configuration between two devices and explain the differences.",
+      "name": "compare_devices"
+    },
+    {
+      "arguments": [
+        {
+          "name": "device",
+          "description": "device name",
+          "required": true
+        }
+      ],
+      "description": "Run a full health review of a device and summarize findings.",
+      "name": "device_health_review"
+    },
+    {
+      "arguments": [
+        {
+          "name": "device",
+          "description": "device name",
+          "required": true
+        },
+        {
+          "name": "neighbor",
+          "description": "optional BGP neighbor IP"
+        }
+      ],
+      "description": "Guide an investigation of BGP session problems on a device.",
+      "name": "troubleshoot_bgp"
+    },
+    {
+      "arguments": [
+        {
+          "name": "device",
+          "description": "device name",
+          "required": true
+        },
+        {
+          "name": "interface",
+          "description": "interface name, e.g. Ethernet1",
+          "required": true
+        }
+      ],
+      "description": "Guide an investigation of a problematic interface on a device.",
+      "name": "troubleshoot_interface"
+    }
+  ]
+}

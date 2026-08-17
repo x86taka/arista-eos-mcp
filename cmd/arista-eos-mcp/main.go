@@ -19,32 +19,6 @@ import (
 
 const version = "0.4.1" // x-release-please-version
 
-// serverInstructions guides the client on how to choose among the tools.
-const serverInstructions = `This server provides access to Arista EOS switches over eAPI and gNMI.
-When EOS_READ_ONLY=true (default), it cannot change configuration; state-changing commands are rejected.
-
-Choosing a target device:
-- Most tools take a "device" argument. Prefer an IP address (e.g. "192.0.2.10").
-  A configured device name or hostname also works. It is optional only when a
-  single device is configured; fleet_* tools target many devices and list_devices takes no device.
-- Some tools instead use "devices" (fleet_*), "device_a"/"device_b" (compare_*),
-   or no device argument at all (list_devices).
-
-Choosing a tool:
-- "get_show_data" covers the curated read-only datasets: pass a "topic" from its
-  enum (e.g. "bgp_summary", "interfaces_status", "mac_address_table"). Prefer it,
-  or another specific tool, over "run_show_command".
-- Use "run_show_command" only for read-only commands no topic or tool covers.
-- For ONE command across MANY devices, use "fleet_run_command" / "fleet_get_version".
-- To diff TWO devices, use "compare_config" or "compare_command".
-- For an overall status check of one device, use "get_device_health".
-- For reachability tests use "ping_host" / "traceroute_host".
-- For model-driven telemetry or to watch values over time, use the gNMI tools
-  ("gnmi_get" for a snapshot, "gnmi_subscribe" for a time window).
-
-The "troubleshoot_*", "device_health_review", and "compare_devices" prompts
-provide ready-made investigation workflows.`
-
 func main() {
 	// Logs go to stderr so they don't corrupt the stdio MCP transport.
 	logger := log.New(os.Stderr, "arista-eos-mcp ", log.LstdFlags|log.Lmsgprefix)
@@ -65,7 +39,7 @@ func main() {
 		Name:    "arista-eos-mcp",
 		Title:   "Arista EOS (read-only)",
 		Version: version,
-	}, &mcp.ServerOptions{Instructions: serverInstructions})
+	}, &mcp.ServerOptions{Instructions: tools.ServerInstructions})
 
 	tools.Register(server, mgr)
 

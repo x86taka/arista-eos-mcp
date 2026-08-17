@@ -129,16 +129,20 @@ var showTopics = func() map[string]showSpec {
 	return m
 }()
 
+// showDataDescriptionPreamble is the fixed part of the tool description, ahead
+// of the generated hint table.
+const showDataDescriptionPreamble = "Fetch a curated read-only EOS dataset by topic. Most topic names say what they " +
+	"return (e.g. 'vlans', 'mac_address_table', 'arp_table'). For the IPv4 routing table with an " +
+	"optional prefix/VRF filter use get_ip_route; for anything with no topic use run_show_command. " +
+	"Hints for the less obvious topics:"
+
 // showDataDescription is assembled once from showCatalog in declared order.
 // It must never be built by ranging over a map: Go randomizes map order per
 // process, which would make the tool definition differ between restarts and
 // defeat client-side prompt caching.
 var showDataDescription = func() string {
 	var b strings.Builder
-	b.WriteString("Fetch a curated read-only EOS dataset by topic. Most topic names say what they " +
-		"return (e.g. 'vlans', 'mac_address_table', 'arp_table'). For the IPv4 routing table with an " +
-		"optional prefix/VRF filter use get_ip_route; for anything with no topic use run_show_command. " +
-		"Hints for the less obvious topics:")
+	b.WriteString(showDataDescriptionPreamble)
 	for _, spec := range showCatalog {
 		if spec.hint == "" {
 			continue

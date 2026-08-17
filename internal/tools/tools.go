@@ -46,13 +46,42 @@ func formatResults(results []eapi.Result) (string, error) {
 
 // shortDeviceDesc is the device-selector blurb used by every tool that takes a
 // single device. The long-form guidance (prefer an IP address, optional only
-// when a single device is configured) lives once in serverInstructions rather
+// when a single device is configured) lives once in ServerInstructions rather
 // than being repeated in every schema.
 //
 // Go struct tags must be literal strings, so the tags below cannot reference
 // this constant and are kept in sync by hand; TestDeviceDescriptionConsistent
 // fails if one of them drifts.
 const shortDeviceDesc = "target device (IP preferred; name/hostname OK); optional if only one device is configured"
+
+// ServerInstructions guides the client on how to choose among the tools
+// registered by Register. It lives beside them, rather than with the server
+// setup that passes it to mcp.ServerOptions, so that every tool and prompt name
+// it mentions is checked against the real tool surface by the tests here.
+const ServerInstructions = `This server provides access to Arista EOS switches over eAPI and gNMI.
+When EOS_READ_ONLY=true (default), it cannot change configuration; state-changing commands are rejected.
+
+Choosing a target device:
+- Most tools take a "device" argument. Prefer an IP address (e.g. "192.0.2.10").
+  A configured device name or hostname also works. It is optional only when a
+  single device is configured; fleet_* tools target many devices and list_devices takes no device.
+- Some tools instead use "devices" (fleet_*), "device_a"/"device_b" (compare_*),
+   or no device argument at all (list_devices).
+
+Choosing a tool:
+- "get_show_data" covers the curated read-only datasets: pass a "topic" from its
+  enum (e.g. "bgp_summary", "interfaces_status", "mac_address_table"). Prefer it,
+  or another specific tool, over "run_show_command".
+- Use "run_show_command" only for read-only commands no topic or tool covers.
+- For ONE command across MANY devices, use "fleet_run_command" / "fleet_get_version".
+- To diff TWO devices, use "compare_config" or "compare_command".
+- For an overall status check of one device, use "get_device_health".
+- For reachability tests use "ping_host" / "traceroute_host".
+- For model-driven telemetry or to watch values over time, use the gNMI tools
+  ("gnmi_get" for a snapshot, "gnmi_subscribe" for a time window).
+
+The "troubleshoot_*", "device_health_review", and "compare_devices" prompts
+provide ready-made investigation workflows.`
 
 // Register adds every tool, resource, and prompt to the server.
 func Register(s *mcp.Server, mgr *manager.Manager) {

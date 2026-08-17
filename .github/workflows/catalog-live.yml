@@ -1,0 +1,83 @@
+name: catalog (live device)
+
+# The offline catalog checks in test.yml prove every topic dispatches and
+# reaches the wire as the command the catalog declares. They cannot prove that
+# command is one EOS accepts: the catalog is the only source of truth for the
+# command string, so a typo matches itself. This workflow closes that gap by
+# running every catalog command against a real device, and is the check that
+# catches an EOS release renaming or retiring a command.
+#
+# Setup:
+#   - secrets EOS_HOST, EOS_USERNAME, EOS_PASSWORD (and EOS_ENABLE_PASSWORD if
+#     the device needs one)
+#   - variables EOS_EAPI_TRANSPORT / EOS_EAPI_PORT if the device is not on
+#     https/443
+#   - variable EOS_CATALOG_EXPECTED_UNSUPPORTED listing topics whose commands
+#     this platform genuinely does not implement, e.g. "macsec,macsec_counters"
+#   - variable EOS_LAB_RUNNER naming a self-hosted runner label, if the device
+#     is not reachable from GitHub-hosted runners (it usually will not be)
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: Device from the inventory to validate against (defaults to the first)
+        required: false
+        type: string
+  schedule:
+    # Weekly, to catch EOS upgrades that change a command out from under us.
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    name: validate catalog against a device
+    # Skip the scheduled run on forks, which will not have the lab configured.
+    if: github.event_name != 'schedule' || github.repository == 'x86taka/Arista-EOS-MCP'
+    runs-on: ${{ vars.EOS_LAB_RUNNER || 'ubuntu-latest' }}
+    # Optional: create an environment of this name to gate the credentials
+    # behind a required reviewer.
+    environment: eos-lab
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check a device is configured
+        id: check
+        env:
+          EOS_HOST: ${{ secrets.EOS_HOST }}
+        run: |
+          if [ -n "$EOS_HOST" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::EOS_HOST is not configured, so the catalog was not validated against a device."
+          # A run someone triggered by hand should fail rather than quietly
+          # report success without having checked anything. A scheduled run on
+          # an unconfigured repository just warns.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "::error::Configure the EOS_HOST/EOS_USERNAME/EOS_PASSWORD secrets first."
+            exit 1
+          fi
+
+      - name: Validate every catalog command against the device
+        if: steps.check.outputs.configured == 'true'
+        env:
+          EOS_HOST: ${{ secrets.EOS_HOST }}
+          EOS_USERNAME: ${{ secrets.EOS_USERNAME }}
+          EOS_PASSWORD: ${{ secrets.EOS_PASSWORD }}
+          EOS_ENABLE_PASSWORD: ${{ secrets.EOS_ENABLE_PASSWORD }}
+          EOS_EAPI_TRANSPORT: ${{ vars.EOS_EAPI_TRANSPORT }}
+          EOS_EAPI_PORT: ${{ vars.EOS_EAPI_PORT }}
+          EOS_CATALOG_DEVICE: ${{ inputs.device }}
+          EOS_CATALOG_EXPECTED_UNSUPPORTED: ${{ vars.EOS_CATALOG_EXPECTED_UNSUPPORTED }}
+        # -count=1 defeats the test cache: the device's answers change even when
+        # the code does not, and a cached pass would validate nothing.
+        run: go test -tags=live -count=1 -timeout 20m -v ./internal/tools/ -run AgainstDevice
