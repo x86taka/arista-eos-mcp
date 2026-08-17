@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.0](https://github.com/x86taka/arista-eos-mcp/compare/v0.4.1...v1.0.0) (2026-08-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* the 57 individual get_* show tools are replaced by get_show_data with a topic enum. Saved prompts, automations, and tool-scoped permission allowlists (e.g. mcp__arista-eos-mcp__get_bgp_summary) that name the old tools must be updated.
+
+### Features
+
+* collapse 57 curated show tools into get_show_data ([3929b50](https://github.com/x86taka/arista-eos-mcp/commit/3929b502942a1a9570a8ba5dae72b1503a8da117))
+* prefer management IPv4 in device catalog and add prefix allowlist ([#14](https://github.com/x86taka/arista-eos-mcp/issues/14)) ([719ae9b](https://github.com/x86taka/arista-eos-mcp/commit/719ae9b11d19d56f389aeb041d1d315d08e24711))
+
+
+### Bug Fixes
+
+* correct six get_show_data commands EOS rejects ([4b36755](https://github.com/x86taka/arista-eos-mcp/commit/4b367557b1b79d6bc6e01d24fed821df020ad92c))
+* redact credentials from eAPI error messages ([#15](https://github.com/x86taka/arista-eos-mcp/issues/15)) ([6e93901](https://github.com/x86taka/arista-eos-mcp/commit/6e93901776e2fb315a075d1c83ca2d420a3addde))
+
 ## [0.4.1](https://github.com/x86taka/arista-eos-mcp/compare/v0.4.0...v0.4.1) (2026-06-28)
 
 
