@@ -44,15 +44,55 @@ func formatResults(results []eapi.Result) (string, error) {
 	return b.String(), nil
 }
 
+// shortDeviceDesc is the device-selector blurb used by every tool that takes a
+// single device. The long-form guidance (prefer an IP address, optional only
+// when a single device is configured) lives once in ServerInstructions rather
+// than being repeated in every schema.
+//
+// Go struct tags must be literal strings, so the tags below cannot reference
+// this constant and are kept in sync by hand; TestDeviceDescriptionConsistent
+// fails if one of them drifts.
+const shortDeviceDesc = "target device (IP preferred; name/hostname OK); optional if only one device is configured"
+
+// ServerInstructions guides the client on how to choose among the tools
+// registered by Register. It lives beside them, rather than with the server
+// setup that passes it to mcp.ServerOptions, so that every tool and prompt name
+// it mentions is checked against the real tool surface by the tests here.
+const ServerInstructions = `This server provides access to Arista EOS switches over eAPI and gNMI.
+When EOS_READ_ONLY=true (default), it cannot change configuration; state-changing commands are rejected.
+
+Choosing a target device:
+- Most tools take a "device" argument. Prefer an IP address (e.g. "192.0.2.10").
+  A configured device name or hostname also works. It is optional only when a
+  single device is configured; fleet_* tools target many devices and list_devices takes no device.
+- Some tools instead use "devices" (fleet_*), "device_a"/"device_b" (compare_*),
+   or no device argument at all (list_devices).
+
+Choosing a tool:
+- "get_show_data" covers the curated read-only datasets: pass a "topic" from its
+  enum (e.g. "bgp_summary", "interfaces_status", "mac_address_table"). Prefer it,
+  or another specific tool, over "run_show_command".
+- Use "run_show_command" only for read-only commands no topic or tool covers.
+- For ONE command across MANY devices, use "fleet_run_command" / "fleet_get_version".
+- To diff TWO devices, use "compare_config" or "compare_command".
+- For an overall status check of one device, use "get_device_health".
+- For reachability tests use "ping_host" / "traceroute_host".
+- For model-driven telemetry or to watch values over time, use the gNMI tools
+  ("gnmi_get" for a snapshot, "gnmi_subscribe" for a time window).
+
+The "troubleshoot_*", "device_health_review", and "compare_devices" prompts
+provide ready-made investigation workflows.`
+
 // Register adds every tool, resource, and prompt to the server.
 func Register(s *mcp.Server, mgr *manager.Manager) {
 	registerListDevices(s, mgr)
 	registerShowTool(s, mgr)
 	registerSimpleEAPITools(s, mgr)
-	registerShowCatalog(s, mgr) // show.go: curated read-only show tools
-	registerDiagnostics(s, mgr) // diagnostics.go: health + compare tools
-	registerOpsTools(s, mgr)    // ops.go: ping/traceroute/bgp diagnostics
-	registerFleetTools(s, mgr)  // fleet.go: multi-device parallel execution
+	registerShowDataTool(s, mgr) // show.go: curated show datasets behind one tool
+	registerIPRoute(s, mgr)      // show.go: routing table, takes prefix/vrf
+	registerDiagnostics(s, mgr)  // diagnostics.go: health + compare tools
+	registerOpsTools(s, mgr)     // ops.go: ping/traceroute/bgp diagnostics
+	registerFleetTools(s, mgr)   // fleet.go: multi-device parallel execution
 	registerGNMITools(s, mgr)
 	registerResources(s, mgr) // resources.go: per-device resources
 	registerPrompts(s)        // resources.go: troubleshooting prompts
@@ -113,7 +153,7 @@ func registerListDevices(s *mcp.Server, mgr *manager.Manager) {
 // --- run_show_command ---
 
 type runShowArgs struct {
-	Device   string `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
+	Device   string `json:"device,omitempty" jsonschema:"target device (IP preferred; name/hostname OK); optional if only one device is configured"`
 	Command  string `json:"command" jsonschema:"the read-only EOS command to run, e.g. 'show version'"`
 	Encoding string `json:"encoding,omitempty" jsonschema:"response encoding: 'json' (default) or 'text'"`
 }
@@ -121,7 +161,7 @@ type runShowArgs struct {
 func registerShowTool(s *mcp.Server, mgr *manager.Manager) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "run_show_command",
-		Description: "Escape hatch: run an arbitrary read-only EOS command over eAPI. Use ONLY when no dedicated get_*/diagnostic tool fits the request — prefer the specific tools (they return cleaner data). Write/config commands are rejected.",
+		Description: "Escape hatch: run an arbitrary read-only EOS command over eAPI. Use ONLY when no get_show_data topic or dedicated tool fits the request — prefer those (they return cleaner data). Write/config commands are rejected.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args runShowArgs) (*mcp.CallToolResult, any, error) {
 		if strings.TrimSpace(args.Command) == "" {
 			return nil, nil, fmt.Errorf("command is required")
@@ -146,18 +186,18 @@ func registerShowTool(s *mcp.Server, mgr *manager.Manager) {
 
 // deviceArgs is the argument struct for tools that only need a device selector.
 type deviceArgs struct {
-	Device string `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
+	Device string `json:"device,omitempty" jsonschema:"target device (IP preferred; name/hostname OK); optional if only one device is configured"`
 }
 
 func registerSimpleEAPITools(s *mcp.Server, mgr *manager.Manager) {
 	// get_interfaces accepts an optional interface name.
 	type ifaceArgs struct {
-		Device    string `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
+		Device    string `json:"device,omitempty" jsonschema:"target device (IP preferred; name/hostname OK); optional if only one device is configured"`
 		Interface string `json:"interface,omitempty" jsonschema:"optional interface name to filter, e.g. 'Ethernet1'"`
 	}
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "get_interfaces",
-		Description: "Full per-interface detail (state, counters, addresses, MTU, description) from 'show interfaces'. Use for a deep look at one or all interfaces; optionally filter by interface name. For a quick up/down overview prefer get_interfaces_status.",
+		Description: "Full per-interface detail (state, counters, addresses, MTU, description). Use for a deep look at one or all interfaces; optionally filter by interface name. For a quick up/down overview prefer get_show_data topic 'interfaces_status'.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, args ifaceArgs) (*mcp.CallToolResult, any, error) {
 		cmd := "show interfaces"
 		if strings.TrimSpace(args.Interface) != "" {
@@ -187,7 +227,7 @@ func registerSimpleEAPITools(s *mcp.Server, mgr *manager.Manager) {
 
 func registerGNMITools(s *mcp.Server, mgr *manager.Manager) {
 	type gnmiGetArgs struct {
-		Device   string   `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
+		Device   string   `json:"device,omitempty" jsonschema:"target device (IP preferred; name/hostname OK); optional if only one device is configured"`
 		Paths    []string `json:"paths" jsonschema:"gNMI paths to retrieve, e.g. ['/interfaces/interface/state']"`
 		Encoding string   `json:"encoding,omitempty" jsonschema:"encoding: 'json_ietf' (default), 'json', 'ascii', 'proto'"`
 		DataType string   `json:"data_type,omitempty" jsonschema:"data type: 'all' (default), 'config', 'state', 'operational'"`
@@ -227,7 +267,7 @@ func registerGNMITools(s *mcp.Server, mgr *manager.Manager) {
 
 	// gnmi_subscribe collects telemetry updates over a bounded window.
 	type gnmiSubArgs struct {
-		Device        string   `json:"device,omitempty" jsonschema:"target device, given as its management IPv4 address (e.g. '192.0.2.10'). This is the intended input. A configured device name also works, but do NOT pass a hostname. Optional only when a single device is configured"`
+		Device        string   `json:"device,omitempty" jsonschema:"target device (IP preferred; name/hostname OK); optional if only one device is configured"`
 		Paths         []string `json:"paths" jsonschema:"gNMI paths to subscribe to, e.g. ['/interfaces/interface/state/counters']"`
 		Mode          string   `json:"mode,omitempty" jsonschema:"subscription mode: 'on-change' (default), 'sample', or 'once'"`
 		SampleSeconds int      `json:"sample_seconds,omitempty" jsonschema:"sample interval in seconds for 'sample' mode (default 10)"`

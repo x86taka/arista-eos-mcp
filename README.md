@@ -9,8 +9,8 @@ configuration or device state is rejected before it reaches the device.
 
 ## Features
 
-- eAPI tools: `run_show_command`, `get_version`, `get_interfaces`,
-  `get_running_config`, `get_lldp_neighbors`, `get_bgp_summary`
+- eAPI tools: `get_show_data` (57 curated read-only datasets behind one `topic`
+  argument), `run_show_command`, `get_interfaces`, `get_running_config`
 - gNMI tools: `gnmi_get`, `gnmi_capabilities`
 - Safety guard that rejects `configure`, `write`, `copy`, `reload`, `clear`,
   `no ...`, `bash`, and other state-changing commands in read-only mode
@@ -329,36 +329,84 @@ the target by name (required when more than one device is configured).
 
 **Inventory & generic**
 
-| Tool                | Description                                          |
-| ------------------- | ---------------------------------------------------- |
-| `list_devices`      | List configured device names                         |
-| `run_show_command`  | Run any read-only command (`json` or `text` output)  |
+| Tool                 | Description                                                  |
+| -------------------- | ------------------------------------------------------------ |
+| `list_devices`       | List configured device names                                  |
+| `get_show_data`      | Fetch a curated read-only dataset by `topic` (see table below) |
+| `run_show_command`   | Run any read-only command (`json` or `text` output)           |
+| `get_running_config` | Running configuration as text                                 |
+| `get_interfaces`     | `show interfaces` (optional interface filter)                 |
+| `get_ip_route`       | `show ip route` (optional prefix / VRF filter)                |
 
-**Curated read-only show tools** (eAPI)
+**`get_show_data` topics** (eAPI)
 
-| Tool                     | Command                          |
-| ------------------------ | -------------------------------- |
-| `get_version`            | `show version`                   |
-| `get_running_config`     | running configuration as text    |
-| `get_interfaces`         | `show interfaces` (opt. filter)  |
-| `get_interfaces_status`  | `show interfaces status`         |
-| `get_interface_counters` | `show interfaces counters`       |
-| `get_mac_address_table`  | `show mac address-table`         |
-| `get_arp_table`          | `show ip arp`                    |
-| `get_ip_route`           | `show ip route` (opt. prefix/VRF)|
-| `get_vlans`              | `show vlan`                      |
-| `get_lldp_neighbors`     | `show lldp neighbors`            |
-| `get_port_channels`      | `show port-channel summary`      |
-| `get_mlag`               | `show mlag`                      |
-| `get_spanning_tree`      | `show spanning-tree`             |
-| `get_bgp_summary`        | `show ip bgp summary`            |
-| `get_bgp_neighbors`      | `show ip bgp neighbors`          |
-| `get_ospf_neighbors`     | `show ip ospf neighbor`          |
-| `get_transceivers`       | `show interfaces transceiver`    |
-| `get_environment`        | `show environment all`           |
-| `get_ntp_status`         | `show ntp status`                |
-| `get_logging`            | `show logging last 100`          |
-| `get_processes`          | `show processes top once`        |
+`get_show_data` replaces what used to be 57 individual `get_*` tools. Collapsing
+them into one tool with a `topic` enum cut the `tools/list` payload every client
+puts in the model's context from ~42 kB to ~14 kB.
+
+```json
+{ "topic": "bgp_summary", "device": "192.0.2.10" }
+```
+
+| Topic                  | Command                        |
+| ---------------------- | ------------------------------ |
+| `version`              | `show version`                 |
+| `interfaces_status`    | `show interfaces status`       |
+| `interface_counters`   | `show interfaces counters`     |
+| `mac_address_table`    | `show mac address-table`       |
+| `arp_table`            | `show ip arp`                  |
+| `vlans`                | `show vlan`                    |
+| `lldp_neighbors`       | `show lldp neighbors`          |
+| `port_channels`        | `show port-channel summary`    |
+| `mlag`                 | `show mlag`                    |
+| `spanning_tree`        | `show spanning-tree`           |
+| `bgp_summary`          | `show ip bgp summary`          |
+| `bgp_neighbors`        | `show ip bgp neighbors`        |
+| `ospf_neighbors`       | `show ip ospf neighbor`        |
+| `transceivers`         | `show interfaces transceiver`  |
+| `environment`          | `show system environment all`  |
+| `ntp_status`           | `show ntp status`              |
+| `logging`              | `show logging 100`             |
+| `processes`            | `show processes top once`      |
+| `vxlan_interface`      | `show interfaces vxlan 1`      |
+| `vxlan_vtep`           | `show vxlan vtep`              |
+| `vxlan_address_table`  | `show vxlan address-table`     |
+| `bgp_evpn_summary`     | `show bgp evpn summary`        |
+| `bgp_evpn`             | `show bgp evpn`                |
+| `ip_interface_brief`   | `show ip interface brief`      |
+| `vrfs`                 | `show vrf`                     |
+| `bfd_peers`            | `show bfd peers`               |
+| `ipv6_neighbors`       | `show ipv6 neighbors`          |
+| `ipv6_route`           | `show ipv6 route`              |
+| `route_summary`        | `show ip route summary`        |
+| `ospf`                 | `show ip ospf`                 |
+| `isis_neighbors`       | `show isis neighbors`          |
+| `pim_neighbors`        | `show ip pim neighbor`         |
+| `igmp_snooping_groups` | `show ip igmp snooping groups` |
+| `lacp_peers`           | `show lacp peer`               |
+| `ip_access_lists`      | `show ip access-lists`         |
+| `inventory`            | `show inventory`               |
+| `reload_cause`         | `show reload cause`            |
+| `hardware_capacity`    | `show hardware capacity`       |
+| `clock`                | `show clock`                   |
+| `qos_interfaces`       | `show qos interfaces`          |
+| `storm_control`        | `show storm-control`           |
+| `dhcp_relay`           | `show ip dhcp relay`           |
+| `sflow`                | `show sflow`                   |
+| `vrrp`                 | `show vrrp`                    |
+| `varp`                 | `show ip virtual-router`       |
+| `ptp`                  | `show ptp`                     |
+| `aaa`                  | `show aaa`                     |
+| `tacacs`               | `show tacacs`                  |
+| `radius`               | `show radius`                  |
+| `snmp`                 | `show snmp`                    |
+| `snmp_host`            | `show snmp notification host`  |
+| `macsec`               | `show mac security interface`  |
+| `macsec_counters`      | `show mac security counters`   |
+| `tunnel_fib`           | `show tunnel fib`              |
+| `mpls_lfib`            | `show mpls lfib route`         |
+| `ldp_neighbors`        | `show mpls ldp neighbor`       |
+| `vxlan_counters`       | `show interfaces vxlan 1 counters` |
 
 **Aggregation & diagnostics**
 
@@ -429,6 +477,103 @@ no write tools are currently implemented.
 go test ./...
 go vet ./...
 ```
+
+### Validating the tool catalog
+
+A model can only call a tool correctly if the catalog it reads is correct, so
+that is checked in CI rather than by review. The checks run in three layers,
+each catching something the one before it cannot.
+
+**1. Invariants** — [`internal/tools/show_test.go`](internal/tools/show_test.go)
+
+Each catalog entry is unique, named in lowercase `snake_case`, runs a plain
+`show` command that the read-only guard in
+[`internal/safety`](internal/safety/safety.go) accepts, and declares a valid
+encoding. No two topics run the same command. The tool description and the
+`topic` enum are rebuilt from the catalog and compared, which proves both are
+still generated by ranging over the slice in declared order — ranging over the
+dispatch map instead would randomize them per process and break prompt caching
+in every client. The hand-written topic table in this README is parsed and
+compared against the catalog too
+([`readme_test.go`](internal/tools/readme_test.go)) — it is how a human decides
+whether a topic already exists, so it is not allowed to drift.
+
+**2. Contract** — [`internal/tools/catalog_contract_test.go`](internal/tools/catalog_contract_test.go)
+
+Every topic is called through a real MCP client session against a fake eAPI
+endpoint, and the request it produces is inspected. This proves each enum value
+passes schema validation, dispatches, survives the read-only guard, and arrives
+as exactly one command — the one its catalog entry declares, in the encoding it
+declares. `get_ip_route`, which builds its command from arguments, is checked
+the same way for each combination of `prefix` and `vrf`.
+
+The whole tool surface is linted alongside it in
+[`internal/tools/toolsurface_test.go`](internal/tools/toolsurface_test.go):
+input schemas must resolve as JSON Schema, close `additionalProperties`,
+declare every required field, and describe every property. Descriptions, prompt
+bodies, and the server instructions may only name tools and prompts that are
+actually registered — a renamed tool that leaves a stale reference behind sends
+the model to call something that does not exist.
+
+[`internal/tools/testdata/tool-surface.golden.json`](internal/tools/testdata/tool-surface.golden.json)
+holds a snapshot of everything the model is told: the instructions, every tool
+definition, every prompt. Changing the catalog changes that file, so the effect
+on what a model sees shows up as a reviewable diff in the same pull request.
+After an intended change, regenerate it:
+
+```sh
+go test ./internal/tools/ -run TestToolSurfaceGolden -update
+```
+
+**3. Live device** — [`internal/tools/catalog_live_test.go`](internal/tools/catalog_live_test.go)
+
+Layers 1 and 2 cannot tell whether a command is one EOS actually accepts: the
+catalog is the only source of truth for the command string, so a typo matches
+itself. Only a device settles it. This layer is behind the `live` build tag and
+runs every catalog command against a real switch:
+
+```sh
+EOS_HOST=192.0.2.10 EOS_USERNAME=admin EOS_PASSWORD=… EOS_EAPI_TRANSPORT=https \
+  go test -tags=live -count=1 ./internal/tools/ -run AgainstDevice -v
+```
+
+A command EOS rejects as invalid, or cannot render in the declared encoding,
+fails the test. An error that reflects device state — a feature not configured,
+an empty table — is reported but does not fail. Commands genuinely unsupported
+on a platform can be baselined per device, and the test fails again if one of
+them starts working, so the baseline cannot rot:
+
+```sh
+EOS_CATALOG_EXPECTED_UNSUPPORTED=macsec,macsec_counters,ptp
+```
+
+| Variable                           | Purpose                                           |
+| ---------------------------------- | ------------------------------------------------- |
+| `EOS_CATALOG_DEVICE`               | Which device to use from a multi-device inventory |
+| `EOS_CATALOG_EXPECTED_UNSUPPORTED` | Topics this platform does not implement           |
+
+Layers 1 and 2 run on every push and pull request in the `tool catalog` job of
+[`.github/workflows/test.yml`](.github/workflows/test.yml). Layer 3 runs weekly
+and on demand from
+[`.github/workflows/catalog-live.yml`](.github/workflows/catalog-live.yml),
+which needs `EOS_HOST`/`EOS_USERNAME`/`EOS_PASSWORD` secrets and, since a lab
+switch is rarely reachable from a GitHub-hosted runner, usually an
+`EOS_LAB_RUNNER` variable naming a self-hosted runner label.
+
+### Adding a `get_show_data` topic
+
+Add one line to `showCatalog` in [`internal/tools/show.go`](internal/tools/show.go)
+— it drives the enum, the hint table, and dispatch — add the matching row to the
+topic table above, then:
+
+```sh
+go test ./internal/tools/...                                       # layers 1 and 2
+go test ./internal/tools/ -run TestToolSurfaceGolden -update       # refresh the snapshot
+```
+
+Commit the snapshot with the change. Give the topic a `hint` only when its name
+does not already say what it returns; every hint costs context in every
+conversation. Verify the command against a device with layer 3 before merging.
 
 ## Releases
 

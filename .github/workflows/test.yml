@@ -31,3 +31,54 @@ jobs:
 
       - name: Test
         run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+  # The tool catalog is what a model sees and calls. This job checks that every
+  # topic is reachable and dispatches to the command it declares, that every
+  # tool definition is one a client can validate arguments against, and that the
+  # committed snapshot of the model-visible surface is up to date. None of it
+  # needs a device; see catalog-live.yml for the checks that do.
+  catalog:
+    name: tool catalog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::These files are not gofmt'd:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet, including the live-tagged tests
+        # The live tests are excluded from the default build, so nothing else
+        # would compile or vet them.
+        run: go vet -tags=live ./...
+
+      - name: Catalog and tool-surface checks
+        run: go test -v ./internal/tools/...
+
+      - name: Snapshot of the model-visible tool surface is current
+        run: |
+          go test ./internal/tools/ -run TestToolSurfaceGolden -update
+          if ! git diff --exit-code -- internal/tools/testdata; then
+            echo "::error::The tool surface changed but its snapshot was not committed."
+            echo "Run: go test ./internal/tools/ -run TestToolSurfaceGolden -update"
+            echo "then review the diff above — it is exactly what every model will now see."
+            exit 1
+          fi
+
+      - name: Report the tools/list budget
+        # Every client puts tools/list in the model's context, so its size is
+        # worth watching over time even when it is within budget.
+        run: |
+          size=$(go test ./internal/tools/ -run TestToolsListSize -v 2>&1 | grep -o 'tools/list:.*' || true)
+          echo "### Tool surface" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`${size:-unavailable}\`" >> "$GITHUB_STEP_SUMMARY"

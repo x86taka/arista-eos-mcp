@@ -83,6 +83,11 @@ func registerPrompts(s *mcp.Server) {
 	arg := func(name, desc string, required bool) *mcp.PromptArgument {
 		return &mcp.PromptArgument{Name: name, Description: desc, Required: required}
 	}
+	// topicRef renders a curated dataset as the get_show_data call that fetches
+	// it, so prompt bodies never name a tool the server doesn't expose.
+	topicRef := func(topic string) string {
+		return fmt.Sprintf("get_show_data(topic=%q)", topic)
+	}
 
 	s.AddPrompt(&mcp.Prompt{
 		Name:        "troubleshoot_interface",
@@ -93,9 +98,10 @@ func registerPrompts(s *mcp.Server) {
 		iface := req.Params.Arguments["interface"]
 		return userPrompt(fmt.Sprintf(
 			"Investigate interface %s on device %q. Use the read-only tools: call get_interfaces (interface=%s) for status/counters, "+
-				"get_interface_counters for error/discard counters, get_transceivers to check optic levels, and get_lldp_neighbors to "+
+				"%s for error/discard counters, %s to check optic levels, and %s to "+
 				"confirm the expected neighbor. Summarize the link state, errors, light levels, and any likely root cause.",
-			iface, d, iface)), nil
+			iface, d, iface,
+			topicRef("interface_counters"), topicRef("transceivers"), topicRef("lldp_neighbors"))), nil
 	})
 
 	s.AddPrompt(&mcp.Prompt{
@@ -110,10 +116,10 @@ func registerPrompts(s *mcp.Server) {
 			focus = "BGP neighbor " + nbr
 		}
 		return userPrompt(fmt.Sprintf(
-			"Investigate %s on device %q. Use get_bgp_summary for session states and prefix counts, then get_bgp_neighbors for detail. "+
+			"Investigate %s on device %q. Use %s for session states and prefix counts, then %s for detail. "+
 				"If a session is not Established, check get_ip_route and get_interfaces for the underlying reachability. "+
 				"Report each neighbor's state, uptime, accepted/advertised prefixes, and the most likely cause of any problem.",
-			focus, d)), nil
+			focus, d, topicRef("bgp_summary"), topicRef("bgp_neighbors"))), nil
 	})
 
 	s.AddPrompt(&mcp.Prompt{
@@ -123,10 +129,10 @@ func registerPrompts(s *mcp.Server) {
 	}, func(ctx context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 		d := req.Params.Arguments["device"]
 		return userPrompt(fmt.Sprintf(
-			"Perform a health review of device %q. Call get_device_health, then drill into anything concerning with get_environment, "+
-				"get_interfaces_status, get_mlag, and get_logging. Produce a concise report grouped into: hardware/environment, "+
+			"Perform a health review of device %q. Call get_device_health, then drill into anything concerning with %s, "+
+				"%s, %s, and %s. Produce a concise report grouped into: hardware/environment, "+
 				"interfaces, redundancy (MLAG/port-channels), routing/BGP, and recent log anomalies. Flag any item that needs attention.",
-			d)), nil
+			d, topicRef("environment"), topicRef("interfaces_status"), topicRef("mlag"), topicRef("logging"))), nil
 	})
 
 	s.AddPrompt(&mcp.Prompt{
